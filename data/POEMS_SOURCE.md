@@ -9,6 +9,9 @@ Only poem paragraph text is included in the generated training corpus. Titles,
 authors, rhythmic annotations, JSON field names, and source metadata are omitted
 from `poems_2m.txt`.
 
+The generated corpus keeps common CJK ideographs, common Chinese punctuation,
+and line breaks. Other symbols are removed during preparation.
+
 The upstream project is licensed under the MIT License:
 
 https://github.com/chinese-poetry/chinese-poetry/blob/master/LICENSE

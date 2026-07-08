@@ -23,6 +23,15 @@ SOURCE_OFFSETS = range(0, 58_000, 1_000)
 EDITORIAL_NOTE = re.compile(r"[（(〔\[].*?[）)〕\]]")
 SPACES = re.compile(r"[ \t\u3000]+")
 BAD_CHARS = str.maketrans("", "", "\ufeff�□〓●◇◆■")
+ALLOWED_PUNCTUATION = set("，。！？；、：")
+
+
+def is_common_cjk_ideograph(char: str) -> bool:
+    return "\u4e00" <= char <= "\u9fff"
+
+
+def keep_poem_char(char: str) -> bool:
+    return is_common_cjk_ideograph(char) or char in ALLOWED_PUNCTUATION
 
 
 def fetch_json(url: str, retries: int = 4) -> list[dict]:
@@ -42,13 +51,13 @@ def clean_line(line: str) -> str:
     line = line.translate(BAD_CHARS)
     line = EDITORIAL_NOTE.sub("", line)
     line = SPACES.sub("", line)
-    return line.strip()
+    return "".join(char for char in line.strip() if keep_poem_char(char))
 
 
 def cjk_count(line: str) -> int:
     count = 0
     for char in line:
-        if "\u3400" <= char <= "\u9fff":
+        if is_common_cjk_ideograph(char):
             count += 1
     return count
 
