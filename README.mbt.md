@@ -23,13 +23,13 @@ CLI 默认只使用语料前 5000 个字符，避免课堂演示时训练和 che
 训练会生成一个 checkpoint。默认输出文件是 `minigpt-model.json`：
 
 ```bash
-moon run --target native cmd/main -- train
+moon run --release cmd/main -- train
 ```
 
 常用小步演示命令：
 
 ```bash
-moon run --target native cmd/main -- train --steps 10 --out minigpt-model.json
+moon run --release cmd/main -- train --steps 10 --out minigpt-model.json
 ```
 
 训练参数：
@@ -50,7 +50,7 @@ moon run --target native cmd/main -- train --steps 10 --out minigpt-model.json
 生成只加载已经训练好的 checkpoint，不会重新训练：
 
 ```bash
-moon run --target native cmd/main -- generate --model minigpt-model.json --prompt 春
+moon run --release cmd/main -- generate --model minigpt-model.json --prompt 春
 ```
 
 每生成一个字，都会打印当前已经补全出的完整内容：
@@ -90,7 +90,7 @@ JSON checkpoint ~= 2.1MB
 如果希望 checkpoint 小一点，可以降低 `--max-chars` 或 `--n-embd`：
 
 ```bash
-moon run --target native cmd/main -- train --max-chars 2000 --n-embd 16
+moon run --release cmd/main -- train --max-chars 2000 --n-embd 16
 ```
 
 注意：如果训练语料窗口太小，默认 prompt `春` 可能不在 tokenizer 词表里，生成时需要换成词表中出现过的字符，或者增大 `--max-chars`。
@@ -116,6 +116,6 @@ data/               古诗语料
 ```bash
 moon check --warn-list +73
 moon test
-moon run --target native cmd/main -- train --steps 1 --out /tmp/minigpt-smoke.json
-moon run --target native cmd/main -- generate --model /tmp/minigpt-smoke.json --prompt 上 --max-new-tokens 5
+moon run --release cmd/main -- train --steps 1 --out /tmp/minigpt-smoke.json
+moon run --release cmd/main -- generate --model /tmp/minigpt-smoke.json --prompt 上 --max-new-tokens 5
 ```
