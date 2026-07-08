@@ -187,19 +187,11 @@ pub fn generate_token_ids_with_sampling_options(
 ///|
 pub fn generate_text(
   model : MiniGPT,
-  tokenizer : BpeTokenizer,
+  tokenizer : CharTokenizer,
   prompt : String,
   max_new_tokens : Int,
   rng : @random.Rand,
 ) -> String raise TokenizerError {
   let prompt_ids = tokenizer.encode(prompt)
-  tokenizer.decode(
-    generate_token_ids_with_sampling_options(
-      model,
-      prompt_ids,
-      max_new_tokens,
-      rng,
-      Some(tokenizer.sampleable_token_ids()),
-    ),
-  )
+  tokenizer.decode(generate_token_ids(model, prompt_ids, max_new_tokens, rng))
 }

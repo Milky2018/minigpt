@@ -17,8 +17,11 @@ pub struct AdamW {
 }
 pub fn AdamW::new(Array[@tensor.Tensor], Double) -> Self
 pub fn AdamW::new_with_options(Array[@tensor.Tensor], Double, Double, Double, Double, Double) -> Self
+pub fn AdamW::new_with_parameter_weight_decays(Array[@tensor.Tensor], Double, Double, Double, Double, Array[Double]) -> Self
+pub fn AdamW::set_learning_rate(Self, Double) -> Unit
 pub fn AdamW::step(Self) -> Unit
 pub fn AdamW::step_count(Self) -> Int
+pub fn AdamW::step_with_grad_clip(Self, Double) -> Unit
 
 type AdamWState
 

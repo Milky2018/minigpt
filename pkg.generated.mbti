@@ -8,27 +8,45 @@ import {
 }
 
 // Values
-pub const BATCH_SIZE : Int = 4
+pub const BATCH_SIZE : Int = 64
 
-pub const BLOCK_SIZE : Int = 8
+pub const BETA1 : Double = 0.9
 
-pub const BPE_VOCAB_SIZE : Int = 512
+pub const BETA2 : Double = 0.99
+
+pub const BLOCK_SIZE : Int = 256
+
+pub const DROPOUT : Double = 0.2
+
+pub const EVAL_INTERVAL : Int = 250
+
+pub const EVAL_ITERS : Int = 200
+
+pub const GRAD_CLIP : Double = 1.0
 
 pub const LEARNING_RATE : Double = 1.0e-3
 
+pub const LOG_INTERVAL : Int = 10
+
+pub const MIN_LR : Double = 1.0e-4
+
 pub const MLP_MULTIPLIER : Int = 4
 
-pub const N_EMBD : Int = 32
+pub const N_EMBD : Int = 384
 
-pub const N_HEAD : Int = 4
+pub const N_HEAD : Int = 6
 
-pub const N_LAYER : Int = 2
+pub const N_LAYER : Int = 6
 
-pub const TRAINING_STEPS : Int = 10
+pub const TRAINING_STEPS : Int = 5000
 
-pub fn decode_checkpoint(Bytes) -> (MiniGPT, BpeTokenizer)
+pub const WARMUP_ITERS : Int = 100
 
-pub fn encode_checkpoint(MiniGPT, BpeTokenizer) -> Bytes
+pub const WEIGHT_DECAY : Double = 1.0e-1
+
+pub fn decode_checkpoint(Bytes) -> (MiniGPT, CharTokenizer)
+
+pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> Bytes
 
 pub fn generate_next_token_id_from_context(MiniGPT, Array[Int], @random.Rand, Int, Int?) -> Int
 
@@ -36,40 +54,35 @@ pub fn generate_next_token_id_from_context_with_options(MiniGPT, Array[Int], @ra
 
 pub fn generate_next_token_id_from_context_with_sampling_options(MiniGPT, Array[Int], @random.Rand, Int, Double, Int?, Array[Int]?) -> Int
 
-pub fn generate_text(MiniGPT, BpeTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
+pub fn generate_text(MiniGPT, CharTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
 
 pub fn generate_token_ids(MiniGPT, Array[Int], Int, @random.Rand) -> Array[Int]
 
 pub fn generate_token_ids_with_sampling_options(MiniGPT, Array[Int], Int, @random.Rand, Array[Int]?) -> Array[Int]
 
+pub fn prepare_shakespeare_char_dataset(String) -> ShakespeareCharDataset
+
 pub fn sample_batch(Array[Int], Int, Int, @random.Rand) -> (@tensor.TokenIds, @tensor.TokenIds)
 
-pub fn train_token_ids(MiniGPT, Array[Int], TrainingConfig, @random.Rand) -> TrainingStats
+pub fn train_token_ids(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand) -> TrainingStats
 
 // Errors
 pub(all) suberror TokenizerError {
+  UnknownCharacter(Char)
   InvalidTokenId(Int)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
-pub(all) struct BpeMerge {
-  left : Int
-  right : Int
-} derive(Eq, @debug.Debug)
-
-pub struct BpeTokenizer {
+pub struct CharTokenizer {
   // private fields
 }
-pub fn BpeTokenizer::byte_level() -> Self
-pub fn BpeTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
-pub fn BpeTokenizer::encode(Self, String) -> Array[Int]
-pub fn BpeTokenizer::from_parts(Array[Bytes], Array[BpeMerge], Array[Int]) -> Self
-pub fn BpeTokenizer::kind_name(Self) -> String
-pub fn BpeTokenizer::merges(Self) -> Array[BpeMerge]
-pub fn BpeTokenizer::sampleable_token_ids(Self) -> Array[Int]
-pub fn BpeTokenizer::train(String, Int) -> (Self, Array[Int])
-pub fn BpeTokenizer::vocab_size(Self) -> Int
-pub fn BpeTokenizer::vocabulary(Self) -> Array[Bytes]
+pub fn CharTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn CharTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn CharTokenizer::from_chars(Array[Char]) -> Self
+pub fn CharTokenizer::kind_name(Self) -> String
+pub fn CharTokenizer::train(String) -> (Self, Array[Int])
+pub fn CharTokenizer::vocab_size(Self) -> Int
+pub fn CharTokenizer::vocabulary(Self) -> Array[Char]
 
 pub struct MiniGPT {
   ctx : @tensor.AutogradContext
@@ -102,26 +115,46 @@ pub struct MiniGPT {
 pub fn MiniGPT::block_size(Self) -> Int
 pub fn MiniGPT::clear_graph(Self) -> Unit
 pub fn MiniGPT::forward(Self, @tensor.TokenIds) -> @tensor.Tensor
+pub fn MiniGPT::forward_train(Self, @tensor.TokenIds, @random.Rand) -> @tensor.Tensor
 pub fn MiniGPT::kind_name(Self) -> String
 pub fn MiniGPT::loss(Self, @tensor.TokenIds, @tensor.TokenIds) -> @tensor.Tensor
+pub fn MiniGPT::loss_train(Self, @tensor.TokenIds, @tensor.TokenIds, @random.Rand) -> @tensor.Tensor
 pub fn MiniGPT::n_embd(Self) -> Int
 pub fn MiniGPT::n_head(Self) -> Int
 pub fn MiniGPT::n_layer(Self) -> Int
 pub fn MiniGPT::new(Int, @random.Rand) -> Self
+pub fn MiniGPT::new_gpt_with_options(Int, Int, Int, Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::new_transformer_with_options(Int, Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::new_with_options(Int, Int, @random.Rand) -> Self
+pub fn MiniGPT::parameter_weight_decays(Self, Double) -> Array[Double]
 pub fn MiniGPT::parameters(Self) -> Array[@tensor.Tensor]
 pub fn MiniGPT::position_embedding_data(Self) -> Array[Double]
 pub fn MiniGPT::token_embedding_data(Self) -> Array[Double]
 pub fn MiniGPT::vocab_size(Self) -> Int
+
+pub struct ShakespeareCharDataset {
+  tokenizer : CharTokenizer
+  train_ids : Array[Int]
+  val_ids : Array[Int]
+}
 
 pub struct TrainingConfig {
   batch_size : Int
   block_size : Int
   steps : Int
   learning_rate : Double
+  min_lr : Double
+  warmup_iters : Int
+  eval_interval : Int
+  eval_iters : Int
+  log_interval : Int
+  weight_decay : Double
+  beta1 : Double
+  beta2 : Double
+  grad_clip : Double
 }
-pub fn TrainingConfig::new(Int, Int, Int, Double) -> Self
+pub fn TrainingConfig::learning_rate_at(Self, Int) -> Double
+pub fn TrainingConfig::new(Int, Int, Int, Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double) -> Self
 pub fn TrainingConfig::recommended() -> Self
 
 pub struct TrainingStats {

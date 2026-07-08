@@ -1,8 +1,8 @@
 # MiniGPT in MoonBit
 
-这是一个用 MoonBit 写的极简自动补全程序。它默认使用 Andrej Karpathy 的 Tiny Shakespeare UTF-8 文本训练一个小型 byte-level BPE tokenizer 和语言模型，然后根据 prompt 逐步补全文本。
+这是一个用 MoonBit 写的极简自动补全程序。当前目标是尽量对齐 Andrej Karpathy `nanoGPT` 的 `shakespeare_char` 配置：同一份 Tiny Shakespeare 语料、字符级 tokenizer、90/10 train/val 切分，以及同一组小型 GPT 超参数。命令行里训练时主要只改 `--steps`。
 
-当前默认模型是一个小型 GPT transformer：token embedding + position embedding + 2 层 decoder block。每个 block 包含 pre-norm multi-head causal self-attention、MLP/GELU 和残差连接，最后用 tied token embedding 作为输出头。它不是语料检索，不会复制 prompt 后面的原文片段。
+当前模型是 GPT decoder-only transformer：token embedding + position embedding + 6 层 decoder block。每个 block 包含 pre-norm multi-head causal self-attention、MLP/GELU、dropout 和残差连接，最后用 tied token embedding 作为输出头。它不是语料检索，不会复制 prompt 后面的原文片段。
 
 ## 数据
 
@@ -12,37 +12,59 @@
 data/tiny_shakespeare.txt
 ```
 
-这个文件来自 Karpathy `char-rnn` 仓库里的 Tiny Shakespeare 数据集，也是 nanoGPT 准备脚本下载的同一份文本。CLI 默认使用完整语料；需要更快的 smoke test 或更小的 checkpoint 时，可以限制语料窗口：
+这个文件来自 Karpathy `char-rnn` 仓库里的 Tiny Shakespeare 数据集，也是 nanoGPT `data/shakespeare_char/prepare.py` 下载的同一份文本。
 
-```bash
---max-chars 5000
+字符级准备流程：
+
+```text
+characters = 1,115,394
+vocab size = 65
+train tokens = 1,003,854
+val tokens = 111,540
+split = first 90% train, last 10% val
 ```
 
 ## 训练
 
-训练会先从语料中训练一个小型 byte-level BPE tokenizer，然后生成一个二进制 checkpoint。默认输出文件是 `minigpt-model.bin`：
+训练会从语料中构造字符级 tokenizer，然后生成一个二进制 checkpoint。默认输出文件是 `minigpt-model.bin`：
 
 ```bash
 moon run --release cmd/main -- train
 ```
 
-指定输出文件：
+指定输出文件或训练迭代数：
 
 ```bash
-moon run --release cmd/main -- train --out minigpt-model.bin
+moon run --release cmd/main -- train --out minigpt-model.bin --steps 5000
 ```
 
 训练参数：
 
 ```text
---data            UTF-8 语料路径，默认 data/tiny_shakespeare.txt
---max-chars       使用多少个语料字符，0 表示完整语料，默认 0
---out             checkpoint 输出路径，默认 minigpt-model.bin
---steps           梯度训练步数，默认 10
---batch-size      batch size，默认 4
---block-size      上下文长度，默认 8
---vocab-size      BPE tokenizer 词表大小，默认 512
---learning-rate   学习率，默认 0.001
+--data   UTF-8 语料路径，默认 data/tiny_shakespeare.txt
+--out    checkpoint 输出路径，默认 minigpt-model.bin
+--steps  训练迭代数，默认 5000
+```
+
+内置训练超参对齐 nanoGPT `config/train_shakespeare_char.py`：
+
+```text
+batch_size = 64
+block_size = 256
+n_layer = 6
+n_head = 6
+n_embd = 384
+dropout = 0.2
+learning_rate = 0.001
+min_lr = 0.0001
+warmup_iters = 100
+eval_interval = 250
+eval_iters = 200
+log_interval = 10
+weight_decay = 0.1
+beta1 = 0.9
+beta2 = 0.99
+grad_clip = 1.0
 ```
 
 ## 生成
@@ -55,7 +77,7 @@ moon run --release cmd/main -- generate --model minigpt-model.bin --prompt ROMEO
 
 如果 `minigpt-model.bin` 不存在，先运行上面的 `train` 命令生成它。
 
-每生成一个 token，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
+每生成一个字符，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
 
 ```text
 completion:
@@ -63,8 +85,6 @@ ROMEO:
 ROMEO:T
 ROMEO:Th
 ROMEO:The
-ROMEO:The
-ROMEO:The l
 ```
 
 生成参数：
@@ -72,47 +92,38 @@ ROMEO:The l
 ```text
 --model           checkpoint 路径，默认 minigpt-model.bin
 --prompt          补全起始文本，默认 ROMEO:
---max-new-tokens  生成 token 数，默认 80
+--max-new-tokens  生成字符数，默认 80
 --top-k           从模型 logits 最高的几个候选中采样，默认 20
 --temperature     采样温度，默认 0.8
 ```
 
+字符级 tokenizer 只能编码训练语料词表里的 65 个字符。默认 Shakespeare 语料不包含中文字符，所以中文 prompt 会被拒绝。
+
 ## Checkpoint 大小
 
-当前 checkpoint 使用紧凑二进制格式。默认 GPT transformer 会保存 embedding、每层 LayerNorm、attention projection、MLP 参数和最终 LayerNorm；输出头复用 token embedding，不再单独保存一份 lm head。
-
-默认完整语料配置大致为：
+当前 checkpoint 使用紧凑二进制格式。默认 GPT 配置大致为：
 
 ```text
-max chars = 0
-tokenizer = byte-bpe
-vocab size = 512
+tokenizer = char
+vocab size = 65
 model kind = gpt-transformer
-n_embd = 32
-n_head = 4
-n_layer = 2
-block size = 8
-parameters ~= 42K Doubles
-binary checkpoint ~= 340KB
+n_embd = 384
+n_head = 6
+n_layer = 6
+block size = 256
+parameters ~= 10.6M Doubles
+binary checkpoint ~= 80-90MB
 ```
-
-如果希望 checkpoint 小一点，可以限制 `--max-chars`：
-
-```bash
-moon run --release cmd/main -- train --max-chars 2000
-```
-
-BPE tokenizer 和 merge list 会保存在 checkpoint 里；`generate` 只加载 checkpoint，不会重新训练 tokenizer。byte-level BPE 可以编码任意 UTF-8 prompt，不会再因为 prompt 含有训练语料外的字符而失败。
 
 ## 项目结构
 
 ```text
-tokenizer.mbt       byte-level BPE tokenizer
+tokenizer.mbt       character tokenizer and train/val split
 tensor/             Tensor 和自动微分基础
 nn/                 神经网络基础算子
-optim/              优化器
+optim/              AdamW 优化器
 model.mbt           MiniGPT 模型
-train.mbt           训练循环
+train.mbt           nanoGPT-style 训练循环
 generate.mbt        采样生成
 checkpoint.mbt      checkpoint 编解码
 cmd/main/           CLI 入口
@@ -123,8 +134,6 @@ data/               Tiny Shakespeare 语料
 ## 验证
 
 ```bash
-moon check --warn-list +73
-moon test
-moon run --release cmd/main -- train --out /tmp/minigpt-smoke.bin
-moon run --release cmd/main -- generate --model /tmp/minigpt-smoke.bin --prompt ROMEO: --max-new-tokens 5
+moon check --warn-list +73 --target native
+moon test --target native
 ```
