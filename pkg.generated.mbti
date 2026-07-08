@@ -4,17 +4,24 @@ package "Milky2018/minigpt"
 import {
   "Milky2018/minigpt/tensor",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/core/random",
 }
 
 // Values
-pub const BATCH_SIZE : Int = 32
+pub const BATCH_SIZE : Int = 4
 
-pub const BLOCK_SIZE : Int = 64
+pub const BLOCK_SIZE : Int = 4
 
 pub const LEARNING_RATE : Double = 1.0e-3
 
-pub const TRAINING_STEPS : Int = 1000
+pub const N_EMBD : Int = 32
+
+pub const TRAINING_STEPS : Int = 10
+
+pub fn decode_checkpoint(String) -> (MiniGPT, CharTokenizer) raise
+
+pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> String
 
 pub fn generate_text(MiniGPT, CharTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
 
@@ -38,19 +45,38 @@ pub struct CharTokenizer {
 pub fn CharTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
 pub fn CharTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
 pub fn CharTokenizer::from_text(String) -> Self
+pub fn CharTokenizer::from_vocabulary(Array[String]) -> Self
 pub fn CharTokenizer::vocab_size(Self) -> Int
+pub fn CharTokenizer::vocabulary(Self) -> Array[String]
 
 pub struct MiniGPT {
   ctx : @tensor.AutogradContext
   token_embedding_table : @tensor.Tensor
+  lm_head : @tensor.Tensor
   vocab_size : Int
+  n_embd : Int
 }
 pub fn MiniGPT::clear_graph(Self) -> Unit
 pub fn MiniGPT::forward(Self, @tensor.TokenIds) -> @tensor.Tensor
+pub fn MiniGPT::from_parameters(Int, Int, Array[Double], Array[Double]) -> Self
+pub fn MiniGPT::lm_head_data(Self) -> Array[Double]
 pub fn MiniGPT::loss(Self, @tensor.TokenIds, @tensor.TokenIds) -> @tensor.Tensor
+pub fn MiniGPT::n_embd(Self) -> Int
 pub fn MiniGPT::new(Int, @random.Rand) -> Self
+pub fn MiniGPT::new_with_options(Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::parameters(Self) -> Array[@tensor.Tensor]
+pub fn MiniGPT::token_embedding_data(Self) -> Array[Double]
 pub fn MiniGPT::vocab_size(Self) -> Int
+
+pub struct MiniGPTCheckpoint {
+  version : Int
+  vocabulary : Array[String]
+  n_embd : Int
+  token_embedding_table : Array[Double]
+  lm_head : Array[Double]
+} derive(ToJson, @json.FromJson)
+pub fn MiniGPTCheckpoint::from_model(MiniGPT, CharTokenizer) -> Self
+pub fn MiniGPTCheckpoint::to_model_and_tokenizer(Self) -> (MiniGPT, CharTokenizer)
 
 pub struct TrainingConfig {
   batch_size : Int

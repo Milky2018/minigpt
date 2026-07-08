@@ -145,18 +145,9 @@ fn backward_node(ctx : AutogradContext, id : Int, grad : Array[Double]) -> Unit 
         None => ()
       }
     Matmul(aid, a_data, a_shape, bid, b_data, b_shape) => {
-      let batch_shape = node.shape[0:node.shape.length() - 2].to_owned()
-      let m = node.shape[node.shape.length() - 2]
-      let n = node.shape[node.shape.length() - 1]
       let k = a_shape[a_shape.length() - 1]
-      let a_full_shape = batch_shape.copy()
-      a_full_shape.push(m)
-      a_full_shape.push(k)
-      let b_full_shape = batch_shape.copy()
-      b_full_shape.push(k)
-      b_full_shape.push(n)
-      let a_full_grad = Array::make(shape_size(a_full_shape), 0.0)
-      let b_full_grad = Array::make(shape_size(b_full_shape), 0.0)
+      let a_grad = Array::make(shape_size(a_shape), 0.0)
+      let b_grad = Array::make(shape_size(b_shape), 0.0)
       for i in 0..<grad.length() {
         let out_idx = unravel_index(i, node.shape)
         let row = out_idx[out_idx.length() - 2]
@@ -170,18 +161,16 @@ fn backward_node(ctx : AutogradContext, id : Int, grad : Array[Double]) -> Unit 
           b_idx.push(col)
           let ai = broadcast_source_index(a_idx, a_shape)
           let bi = broadcast_source_index(b_idx, b_shape)
-          a_full_grad[ravel_index(a_idx, a_full_shape)] += grad[i] * b_data[bi]
-          b_full_grad[ravel_index(b_idx, b_full_shape)] += grad[i] * a_data[ai]
+          a_grad[ai] += grad[i] * b_data[bi]
+          b_grad[bi] += grad[i] * a_data[ai]
         }
       }
       match aid {
-        Some(id) =>
-          ctx.add_grad(id, reduce_to_shape(a_full_grad, a_full_shape, a_shape))
+        Some(id) => ctx.add_grad(id, a_grad)
         None => ()
       }
       match bid {
-        Some(id) =>
-          ctx.add_grad(id, reduce_to_shape(b_full_grad, b_full_shape, b_shape))
+        Some(id) => ctx.add_grad(id, b_grad)
         None => ()
       }
     }

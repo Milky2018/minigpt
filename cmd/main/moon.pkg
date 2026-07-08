@@ -1,6 +1,10 @@
-// import {
-//   "Milky2018/minigpt" @lib,
-// }
+import {
+  "Milky2018/minigpt",
+  "moonbitlang/core/argparse",
+  "moonbitlang/core/random",
+  "moonbitlang/core/string",
+  "moonbitlang/x/fs",
+}
 
 options(
   "is-main": true,

@@ -29,6 +29,34 @@ pub fn CharTokenizer::from_text(text : String) -> CharTokenizer {
 }
 
 ///|
+pub fn CharTokenizer::from_vocabulary(
+  vocabulary : Array[String],
+) -> CharTokenizer {
+  if vocabulary.length() == 0 {
+    abort("vocabulary must not be empty")
+  }
+  let char_to_id : Map[Char, Int] = Map::default()
+  let id_to_char : Array[Char] = []
+  for i in 0..<vocabulary.length() {
+    if vocabulary[i].char_length() != 1 {
+      abort("each vocabulary item must contain exactly one character")
+    }
+    let ch = vocabulary[i].iter().next().unwrap()
+    if char_to_id.contains(ch) {
+      abort("vocabulary contains duplicate characters")
+    }
+    char_to_id.set(ch, i)
+    id_to_char.push(ch)
+  }
+  { char_to_id, id_to_char }
+}
+
+///|
+pub fn CharTokenizer::vocabulary(self : CharTokenizer) -> Array[String] {
+  self.id_to_char.map(ch => String::from_array([ch]))
+}
+
+///|
 pub fn CharTokenizer::vocab_size(self : CharTokenizer) -> Int {
   self.id_to_char.length()
 }

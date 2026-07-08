@@ -139,7 +139,46 @@ A trainable tensor value whose data may be mutated by an optimizer while normal
 tensor expressions remain immutable.
 _Avoid_: Mutable temporary tensor
 
+**Low-rank Bigram Model**:
+The first runnable MiniGPT model factorizes next-token logits as token
+embedding plus output projection, using `[vocab_size, n_embd]` and
+`[n_embd, vocab_size]` parameters instead of a dense `[vocab_size, vocab_size]`
+bigram table.
+_Avoid_: Full-vocabulary bigram matrix
+
 **Gradient Checker**:
 A testing utility that compares autodiff gradients against finite-difference
 numerical gradients for small tensor programs.
 _Avoid_: Trusting unverified gradients
+
+**CLI Entry Command**:
+A runnable `cmd/main` subcommand that wires corpus loading, tokenization,
+training, and generation together for demos without owning model logic.
+_Avoid_: Putting core model or tensor implementation in `cmd/main`
+
+**Train Command**:
+The CLI entry command that reads a text corpus, builds the character tokenizer,
+creates a fresh MiniGPT model, trains it for the requested number of steps, and
+persists a checkpoint for later generation.
+_Avoid_: Training without saving weights
+
+**Generate Command**:
+The CLI entry command that loads a trained checkpoint, restores its tokenizer
+and model weights, and samples continuation text from a prompt.
+_Avoid_: Re-training inside generation
+
+**Model Checkpoint**:
+A JSON file containing checkpoint version, character vocabulary, embedding
+dimension, token embedding weights, and output projection weights.
+_Avoid_: Saving weights without tokenizer vocabulary
+
+**Completion Trace**:
+The CLI output that prints the prompt once and then prints each generated token
+as it is produced, so the teaching demo makes autocomplete visible without
+repeating the full accumulated text at every step.
+_Avoid_: Growing-text step log
+
+**CLI Corpus Window**:
+The character prefix of the corpus used by CLI demos to keep the bigram model
+small enough for the default MoonBit runtime; `0` means use the full corpus.
+_Avoid_: Defaulting the CLI to full-corpus bigram training
