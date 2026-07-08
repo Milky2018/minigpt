@@ -31,6 +31,6 @@ test "AdamW step updates parameters and counts steps" {
   (p * @tensor.Tensor::from_array([2.0], [1])).sum().backward()
   let opt = AdamW::new_with_options([p], 0.1, 0.9, 0.999, 1.0e-8, 0.0)
   opt.step()
-  assert_eq(opt.step_count(), 1)
+  @test.assert_eq(opt.step_count(), 1)
   assert_close(p.data()[0], 0.9000000005)
 }

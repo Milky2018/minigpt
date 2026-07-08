@@ -6,18 +6,6 @@ fn assert_close(actual : Double, expected : Double) -> Unit {
 }
 
 ///|
-fn assert_int_array_eq(actual : Array[Int], expected : Array[Int]) -> Unit {
-  if actual.length() != expected.length() {
-    abort("array lengths differ")
-  }
-  for i in 0..<actual.length() {
-    if actual[i] != expected[i] {
-      abort("arrays differ")
-    }
-  }
-}
-
-///|
 fn assert_double_array_eq(
   actual : Array[Double],
   expected : Array[Double],
@@ -35,7 +23,7 @@ test "embedding wraps tensor gather rows" {
   let weight = @tensor.Tensor::from_array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [3, 2])
   let ids = @tensor.TokenIds::new([1, 2], [2])
   let out = embedding(weight, ids)
-  assert_int_array_eq(out.shape(), [2, 2])
+  @test.assert_eq(out.shape(), [2, 2])
   assert_double_array_eq(out.data(), [3.0, 4.0, 5.0, 6.0])
 }
 

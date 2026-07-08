@@ -4,3 +4,7 @@ import {
   "Milky2018/minigpt/tensor",
   "moonbitlang/core/random",
 }
+
+import {
+  "moonbitlang/core/test",
+} for "wbtest"

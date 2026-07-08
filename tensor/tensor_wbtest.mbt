@@ -3,32 +3,24 @@ fn assert_array_close(
   actual : Array[Double],
   expected : Array[Double],
 ) -> Unit raise {
-  assert_eq(actual.length(), expected.length())
+  @test.assert_eq(actual.length(), expected.length())
   for i in 0..<actual.length() {
     assert_true((actual[i] - expected[i]).abs() < 1.0e-9)
   }
 }
 
 ///|
-fn assert_int_array(actual : Array[Int], expected : Array[Int]) -> Unit raise {
-  assert_eq(actual.length(), expected.length())
-  for i in 0..<actual.length() {
-    assert_eq(actual[i], expected[i])
-  }
-}
-
-///|
 test "tensor validates shape and stores copies" {
   let t = Tensor::from_array([1.0, 2.0, 3.0, 4.0], [2, 2])
-  assert_int_array(t.shape(), [2, 2])
+  @test.assert_eq(t.shape(), [2, 2])
   assert_array_close(t.data(), [1.0, 2.0, 3.0, 4.0])
 }
 
 ///|
 test "token ids validate shape" {
   let ids = TokenIds::new([1, 2, 3, 4], [2, 2])
-  assert_int_array(ids.shape(), [2, 2])
-  assert_int_array(ids.data(), [1, 2, 3, 4])
+  @test.assert_eq(ids.shape(), [2, 2])
+  @test.assert_eq(ids.data(), [1, 2, 3, 4])
 }
 
 ///|
@@ -36,7 +28,7 @@ test "elementwise add broadcasts values" {
   let a = Tensor::from_array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3])
   let b = Tensor::from_array([10.0, 20.0, 30.0], [3])
   let c = a + b
-  assert_int_array(c.shape(), [2, 3])
+  @test.assert_eq(c.shape(), [2, 3])
   assert_array_close(c.data(), [11.0, 22.0, 33.0, 14.0, 25.0, 36.0])
 }
 
@@ -80,7 +72,7 @@ test "reshape preserves values and propagates gradients" {
   let ctx = AutogradContext::new()
   let x = Tensor::parameter(ctx, [1.0, 2.0, 3.0, 4.0], [2, 2])
   let y = x.reshape([4])
-  assert_int_array(y.shape(), [4])
+  @test.assert_eq(y.shape(), [4])
   assert_array_close(y.data(), [1.0, 2.0, 3.0, 4.0])
   y.sum().backward()
   match x.grad() {

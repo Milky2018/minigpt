@@ -4,7 +4,7 @@ test "gather_rows values and gradients" {
   let weight = Tensor::parameter(ctx, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [3, 2])
   let ids = TokenIds::new([2, 0, 2], [3])
   let out = weight.gather_rows(ids)
-  assert_int_array(out.shape(), [3, 2])
+  @test.assert_eq(out.shape(), [3, 2])
   assert_array_close(out.data(), [5.0, 6.0, 1.0, 2.0, 5.0, 6.0])
   out.sum().backward()
   match weight.grad() {
