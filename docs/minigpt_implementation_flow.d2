@@ -1,0 +1,68 @@
+vars: {
+  d2-config: {
+    layout-engine: dagre
+    theme-id: 0
+  }
+}
+
+title: "MiniGPT teaching architecture"
+
+poems: "1. Poems text"
+tokenizer: "2. Char tokenizer"
+ids: "3. Token ids"
+batch: "4. Batch x/y"
+model: "5. Tiny GPT model"
+logits: "6. Logits"
+loss: "7. Next-token loss"
+optim: "8. Optimizer step"
+ckpt: "9. Checkpoint"
+
+prompt: "A. Prompt text"
+gen: "B. Generation loop"
+sample: "C. Sample next id"
+decode: "D. Decode ids"
+complete: "E. Completed text"
+
+internals: "Model internals"
+block: "GPT block"
+
+poems -> tokenizer: "scan chars"
+tokenizer -> ids: "encode corpus"
+ids -> batch: "make x and y"
+batch -> model: "x"
+model -> logits
+logits -> loss
+batch -> loss: "y"
+loss -> optim: "gradients"
+optim -> ckpt: "save weights"
+tokenizer -> ckpt: "save vocab"
+
+prompt -> gen
+ckpt -> gen: "load vocab + weights"
+gen -> sample: "repeat until max tokens"
+sample -> decode
+decode -> complete
+
+model -> internals
+internals -> block
+
+internals: {
+  embed: "Token embedding"
+  pos: "Position embedding"
+  head: "Linear head"
+
+  embed -> block
+  pos -> block
+  block -> head
+}
+
+block: {
+  norm1: "LayerNorm"
+  attn: "Causal self-attention"
+  norm2: "LayerNorm"
+  ffn: "Feed-forward"
+
+  norm1 -> attn
+  attn -> norm2: "residual"
+  norm2 -> ffn
+}
