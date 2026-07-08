@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/minigpt"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror TokenizerError {
+  UnknownChar(Char)
+  InvalidTokenId(Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct CharTokenizer {
+  // private fields
+}
+pub fn CharTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn CharTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn CharTokenizer::from_text(String) -> Self
+pub fn CharTokenizer::vocab_size(Self) -> Int
+
+// Type aliases
+
+// Traits
+
