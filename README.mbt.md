@@ -38,15 +38,47 @@ moon run --release cmd/main -- train
 moon run --release cmd/main -- train --out minigpt-model.bin --steps 5000
 ```
 
-训练参数：
+训练参数默认对齐 nanoGPT，也可以显式覆盖成小配置做 smoke/benchmark：
 
 ```text
---data   UTF-8 语料路径，默认 data/tiny_shakespeare.txt
---out    checkpoint 输出路径，默认 minigpt-model.bin
---steps  训练迭代数，默认 5000
+--data                    UTF-8 语料路径，默认 data/tiny_shakespeare.txt
+--out                     checkpoint 输出路径，默认 minigpt-model.bin
+--steps                   训练迭代数，默认 5000
+--batch-size              batch size，默认 64
+--block-size              上下文长度，默认 256
+--n-embd                  embedding width，默认 384
+--n-head                  attention head count，默认 6
+--n-layer                 transformer block count，默认 6
+--learning-rate           学习率，默认 0.001
+--eval-interval           每多少个 iter 做 eval，默认 250
+--eval-iters              每次 eval 的 batch 数，默认 200
+--log-interval            每多少个 iter 打印 train loss，默认 10
+--always-save-checkpoint  每次 eval 后保存 checkpoint，默认 false
 ```
 
 `--steps` 对应 nanoGPT 的 `max_iters`，循环结束条件是 `iter_num > max_iters`，因此 `--steps 1` 会执行 iter 0 和 iter 1 两次更新。iter 0 的 eval 不保存 checkpoint；只有 `iter_num > 0` 且 val loss 创新低时才会写入 `--out`。
+
+快速走通完整训练和生成流程可以用小模型配置：
+
+```bash
+moon run --release cmd/main -- train \
+  --out /tmp/minigpt-small.bin \
+  --steps 3 \
+  --batch-size 4 \
+  --block-size 8 \
+  --n-embd 24 \
+  --n-head 4 \
+  --n-layer 2 \
+  --eval-interval 1 \
+  --eval-iters 1 \
+  --log-interval 1 \
+  --always-save-checkpoint true
+
+moon run --release cmd/main -- generate \
+  --model /tmp/minigpt-small.bin \
+  --prompt ROMEO: \
+  --max-new-tokens 8
+```
 
 内置训练超参对齐 nanoGPT `config/train_shakespeare_char.py`：
 

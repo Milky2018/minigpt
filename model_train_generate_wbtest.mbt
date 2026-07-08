@@ -69,6 +69,7 @@ test "recommended training config uses public constants" {
   @test.assert_eq(config.beta1, BETA1)
   @test.assert_eq(config.beta2, BETA2)
   @test.assert_eq(config.grad_clip, GRAD_CLIP)
+  @test.assert_eq(config.always_save_checkpoint, false)
 }
 
 ///|

@@ -158,9 +158,10 @@ pub struct TrainingConfig {
   beta1 : Double
   beta2 : Double
   grad_clip : Double
+  always_save_checkpoint : Bool
 }
 pub fn TrainingConfig::learning_rate_at(Self, Int) -> Double
-pub fn TrainingConfig::new(Int, Int, Int, Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double) -> Self
+pub fn TrainingConfig::new(Int, Int, Int, Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double, always_save_checkpoint? : Bool) -> Self
 pub fn TrainingConfig::recommended() -> Self
 
 pub struct TrainingStats {

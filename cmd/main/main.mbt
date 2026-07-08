@@ -44,6 +44,51 @@ fn training_options() -> Array[@argparse.OptionArg] {
     OptionArg("steps", long="steps", about="training steps", default_values=[
       @minigpt.TRAINING_STEPS.to_string(),
     ]),
+    OptionArg("batch-size", long="batch-size", about="batch size", default_values=[
+      @minigpt.BATCH_SIZE.to_string(),
+    ]),
+    OptionArg("block-size", long="block-size", about="context length", default_values=[
+      @minigpt.BLOCK_SIZE.to_string(),
+    ]),
+    OptionArg("n-embd", long="n-embd", about="transformer embedding width", default_values=[
+      @minigpt.N_EMBD.to_string(),
+    ]),
+    OptionArg("n-head", long="n-head", about="attention head count", default_values=[
+      @minigpt.N_HEAD.to_string(),
+    ]),
+    OptionArg("n-layer", long="n-layer", about="transformer block count", default_values=[
+      @minigpt.N_LAYER.to_string(),
+    ]),
+    OptionArg(
+      "learning-rate",
+      long="learning-rate",
+      about="optimizer learning rate",
+      default_values=[@minigpt.LEARNING_RATE.to_string()],
+    ),
+    OptionArg(
+      "eval-interval",
+      long="eval-interval",
+      about="evaluate every N iterations",
+      default_values=[@minigpt.EVAL_INTERVAL.to_string()],
+    ),
+    OptionArg(
+      "eval-iters",
+      long="eval-iters",
+      about="number of batches per evaluation",
+      default_values=[@minigpt.EVAL_ITERS.to_string()],
+    ),
+    OptionArg(
+      "log-interval",
+      long="log-interval",
+      about="print train loss every N iterations",
+      default_values=[@minigpt.LOG_INTERVAL.to_string()],
+    ),
+    OptionArg(
+      "always-save-checkpoint",
+      long="always-save-checkpoint",
+      about="save at every eval after iter 0",
+      default_values=["false"],
+    ),
   ]
 }
 
@@ -94,12 +139,25 @@ fn double_value(matches : @argparse.Matches, name : String) -> Double {
 }
 
 ///|
+fn bool_value(matches : @argparse.Matches, name : String) -> Bool {
+  match value(matches, name) {
+    "true" | "1" | "yes" => true
+    "false" | "0" | "no" => false
+    _ => abort("invalid boolean for --\{name}")
+  }
+}
+
+///|
 fn training_config(matches : @argparse.Matches) -> @minigpt.TrainingConfig {
   @minigpt.TrainingConfig::new(
-    @minigpt.BATCH_SIZE,
-    @minigpt.BLOCK_SIZE,
+    int_value(matches, "batch-size"),
+    int_value(matches, "block-size"),
     int_value(matches, "steps"),
-    @minigpt.LEARNING_RATE,
+    double_value(matches, "learning-rate"),
+    eval_interval=int_value(matches, "eval-interval"),
+    eval_iters=int_value(matches, "eval-iters"),
+    log_interval=int_value(matches, "log-interval"),
+    always_save_checkpoint=bool_value(matches, "always-save-checkpoint"),
   )
 }
 
@@ -166,6 +224,9 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   let data_path = value(matches, "data")
   let out_path = value(matches, "out")
   let config = training_config(matches)
+  let n_embd = int_value(matches, "n-embd")
+  let n_head = int_value(matches, "n-head")
+  let n_layer = int_value(matches, "n-layer")
   let rng = @random.Rand::new()
   let dataset = load_dataset(data_path)
   println("command: train")
@@ -175,12 +236,19 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("train tokens: \{dataset.train_ids.length()}")
   println("val tokens: \{dataset.val_ids.length()}")
   println("steps: \{config.steps}")
+  println("batch size: \{config.batch_size}")
+  println("block size: \{config.block_size}")
+  println("learning rate: \{config.learning_rate}")
+  println("eval interval: \{config.eval_interval}")
+  println("eval iters: \{config.eval_iters}")
+  println("log interval: \{config.log_interval}")
+  println("always save checkpoint: \{config.always_save_checkpoint}")
   println("checkpoint: \{out_path}")
   let model = @minigpt.MiniGPT::new_gpt_with_options(
     dataset.tokenizer.vocab_size(),
-    @minigpt.N_EMBD,
-    @minigpt.N_HEAD,
-    @minigpt.N_LAYER,
+    n_embd,
+    n_head,
+    n_layer,
     config.block_size,
     rng,
   )

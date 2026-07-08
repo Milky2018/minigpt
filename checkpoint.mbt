@@ -1,5 +1,5 @@
 ///|
-const CHECKPOINT_VERSION : Int = 7
+const CHECKPOINT_VERSION : Int = 8
 
 ///|
 const CHECKPOINT_MAGIC : Int = 1296649799
@@ -235,6 +235,7 @@ fn write_training_config(buffer : Buffer, config : TrainingConfig) -> Unit {
   buffer.write_double_le(config.beta1)
   buffer.write_double_le(config.beta2)
   buffer.write_double_le(config.grad_clip)
+  buffer.write_int_le(if config.always_save_checkpoint { 1 } else { 0 })
 }
 
 ///|
@@ -411,7 +412,17 @@ fn BytesReader::read_training_config(self : BytesReader) -> TrainingConfig {
     beta1=self.read_double_le(),
     beta2=self.read_double_le(),
     grad_clip=self.read_double_le(),
+    always_save_checkpoint=self.read_bool(),
   )
+}
+
+///|
+fn BytesReader::read_bool(self : BytesReader) -> Bool {
+  match self.read_int_le() {
+    0 => false
+    1 => true
+    _ => abort("invalid checkpoint boolean")
+  }
 }
 
 ///|

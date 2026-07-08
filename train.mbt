@@ -52,6 +52,7 @@ pub struct TrainingConfig {
   beta1 : Double
   beta2 : Double
   grad_clip : Double
+  always_save_checkpoint : Bool
 }
 
 ///|
@@ -69,6 +70,7 @@ pub fn TrainingConfig::new(
   beta1? : Double = BETA1,
   beta2? : Double = BETA2,
   grad_clip? : Double = GRAD_CLIP,
+  always_save_checkpoint? : Bool = false,
 ) -> TrainingConfig {
   if batch_size <= 0 {
     abort("batch_size must be positive")
@@ -120,6 +122,7 @@ pub fn TrainingConfig::new(
     beta1,
     beta2,
     grad_clip,
+    always_save_checkpoint,
   }
 }
 
@@ -270,12 +273,13 @@ pub fn train_token_ids_with_checkpoint_callback(
         initial_eval_loss = val_loss
       }
       final_eval_loss = val_loss
-      if val_loss < best_val_loss {
+      let improved = val_loss < best_val_loss
+      if improved {
         best_val_loss = val_loss
-        if iter_num > 0 {
-          on_checkpoint(model, optimizer, iter_num, best_val_loss, config)
-          saved_checkpoints += 1
-        }
+      }
+      if iter_num > 0 && (improved || config.always_save_checkpoint) {
+        on_checkpoint(model, optimizer, iter_num, best_val_loss, config)
+        saved_checkpoints += 1
       }
     }
     let (inputs, targets) = sample_batch(
