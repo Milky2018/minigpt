@@ -38,7 +38,7 @@ moon run --release cmd/main -- train --out minigpt-model.bin
 --data            UTF-8 语料路径，默认 data/poems_2m.txt
 --max-chars       使用多少个语料字符，0 表示完整语料，默认 0
 --out             checkpoint 输出路径，默认 minigpt-model.bin
---steps           额外梯度微调步数，默认 0
+--steps           梯度训练步数，默认 10
 --batch-size      batch size，默认 4
 --block-size      上下文长度，默认 4
 --learning-rate   学习率，默认 0.001

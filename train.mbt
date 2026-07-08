@@ -5,7 +5,7 @@ pub const BATCH_SIZE : Int = 4
 pub const BLOCK_SIZE : Int = 4
 
 ///|
-pub const TRAINING_STEPS : Int = 0
+pub const TRAINING_STEPS : Int = 10
 
 ///|
 pub const LEARNING_RATE : Double = 1.0e-3

@@ -16,7 +16,7 @@ pub const LEARNING_RATE : Double = 1.0e-3
 
 pub const N_EMBD : Int = 128
 
-pub const TRAINING_STEPS : Int = 0
+pub const TRAINING_STEPS : Int = 10
 
 pub fn decode_checkpoint(Bytes) -> (MiniGPT, CharTokenizer)
 
