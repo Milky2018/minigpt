@@ -5,12 +5,6 @@ pub const N_EMBD : Int = 32
 const KIND_TRANSFORMER : String = "tiny-transformer"
 
 ///|
-const KIND_FULL_RANK_BIGRAM : String = "full-rank-bigram"
-
-///|
-const KIND_LOW_RANK_BIGRAM : String = "low-rank-bigram"
-
-///|
 pub struct MiniGPT {
   ctx : @tensor.AutogradContext
   token_embedding_table : @tensor.Tensor
@@ -23,8 +17,6 @@ pub struct MiniGPT {
   vocab_size : Int
   n_embd : Int
   block_size : Int
-  kind : String
-  full_rank : Bool
 }
 
 ///|
@@ -77,8 +69,6 @@ pub fn MiniGPT::new_transformer_with_options(
     vocab_size,
     n_embd,
     block_size,
-    kind: KIND_TRANSFORMER,
-    full_rank: false,
   }
 }
 
@@ -132,143 +122,7 @@ pub fn MiniGPT::from_transformer_parameters(
     vocab_size,
     n_embd,
     block_size,
-    kind: KIND_TRANSFORMER,
-    full_rank: false,
   }
-}
-
-///|
-pub fn MiniGPT::from_parameters(
-  vocab_size : Int,
-  n_embd : Int,
-  token_embedding_table : Array[Double],
-  lm_head : Array[Double],
-) -> MiniGPT {
-  if vocab_size <= 0 {
-    abort("vocab_size must be positive")
-  }
-  if n_embd <= 0 {
-    abort("n_embd must be positive")
-  }
-  let ctx = @tensor.AutogradContext::new()
-  let token_embedding_table = @tensor.Tensor::parameter(
-    ctx,
-    token_embedding_table,
-    [vocab_size, n_embd],
-  )
-  let position_embedding_table = @tensor.Tensor::scalar(0.0)
-  let wq = @tensor.Tensor::scalar(0.0)
-  let wk = @tensor.Tensor::scalar(0.0)
-  let wv = @tensor.Tensor::scalar(0.0)
-  let wo = @tensor.Tensor::scalar(0.0)
-  let lm_head = @tensor.Tensor::parameter(ctx, lm_head, [n_embd, vocab_size])
-  {
-    ctx,
-    token_embedding_table,
-    position_embedding_table,
-    wq,
-    wk,
-    wv,
-    wo,
-    lm_head,
-    vocab_size,
-    n_embd,
-    block_size: 1,
-    kind: KIND_LOW_RANK_BIGRAM,
-    full_rank: false,
-  }
-}
-
-///|
-pub fn MiniGPT::new_full_rank(vocab_size : Int, rng : @random.Rand) -> MiniGPT {
-  if vocab_size <= 0 {
-    abort("vocab_size must be positive")
-  }
-  let ctx = @tensor.AutogradContext::new()
-  let token_embedding_table = scaled_randn(ctx, [vocab_size, vocab_size], rng)
-  let position_embedding_table = @tensor.Tensor::scalar(0.0)
-  let wq = @tensor.Tensor::scalar(0.0)
-  let wk = @tensor.Tensor::scalar(0.0)
-  let wv = @tensor.Tensor::scalar(0.0)
-  let wo = @tensor.Tensor::scalar(0.0)
-  let lm_head = @tensor.Tensor::scalar(0.0)
-  {
-    ctx,
-    token_embedding_table,
-    position_embedding_table,
-    wq,
-    wk,
-    wv,
-    wo,
-    lm_head,
-    vocab_size,
-    n_embd: vocab_size,
-    block_size: 1,
-    kind: KIND_FULL_RANK_BIGRAM,
-    full_rank: true,
-  }
-}
-
-///|
-pub fn MiniGPT::from_full_rank_parameters(
-  vocab_size : Int,
-  token_embedding_table : Array[Double],
-) -> MiniGPT {
-  if vocab_size <= 0 {
-    abort("vocab_size must be positive")
-  }
-  let ctx = @tensor.AutogradContext::new()
-  let token_embedding_table = @tensor.Tensor::parameter(
-    ctx,
-    token_embedding_table,
-    [vocab_size, vocab_size],
-  )
-  let position_embedding_table = @tensor.Tensor::scalar(0.0)
-  let wq = @tensor.Tensor::scalar(0.0)
-  let wk = @tensor.Tensor::scalar(0.0)
-  let wv = @tensor.Tensor::scalar(0.0)
-  let wo = @tensor.Tensor::scalar(0.0)
-  let lm_head = @tensor.Tensor::scalar(0.0)
-  {
-    ctx,
-    token_embedding_table,
-    position_embedding_table,
-    wq,
-    wk,
-    wv,
-    wo,
-    lm_head,
-    vocab_size,
-    n_embd: vocab_size,
-    block_size: 1,
-    kind: KIND_FULL_RANK_BIGRAM,
-    full_rank: true,
-  }
-}
-
-///|
-pub fn MiniGPT::from_bigram_counts(
-  vocab_size : Int,
-  token_ids : Array[Int],
-  smoothing : Double,
-) -> MiniGPT {
-  if smoothing <= 0.0 {
-    abort("smoothing must be positive")
-  }
-  let counts = Array::make(vocab_size * vocab_size, smoothing)
-  if token_ids.length() > 1 {
-    for i in 0..<(token_ids.length() - 1) {
-      let from = token_ids[i]
-      let to = token_ids[i + 1]
-      if from >= 0 && from < vocab_size && to >= 0 && to < vocab_size {
-        counts[from * vocab_size + to] += 1.0
-      }
-    }
-  }
-  for i in 0..<counts.length() {
-    counts[i] = @math.ln(counts[i])
-  }
-  MiniGPT::from_full_rank_parameters(vocab_size, counts)
 }
 
 ///|
@@ -302,8 +156,8 @@ pub fn MiniGPT::block_size(self : MiniGPT) -> Int {
 }
 
 ///|
-pub fn MiniGPT::kind_name(self : MiniGPT) -> String {
-  self.kind
+pub fn MiniGPT::kind_name(_self : MiniGPT) -> String {
+  KIND_TRANSFORMER
 }
 
 ///|
@@ -384,30 +238,22 @@ pub fn MiniGPT::forward(
   input_ids : @tensor.TokenIds,
 ) -> @tensor.Tensor {
   let embeddings = @nn.embedding(self.token_embedding_table, input_ids)
-  if self.kind == KIND_FULL_RANK_BIGRAM {
-    embeddings
-  } else if self.kind == KIND_LOW_RANK_BIGRAM {
-    embeddings.matmul(self.lm_head)
-  } else if self.kind == KIND_TRANSFORMER {
-    let shape = input_ids.shape()
-    let time = shape[shape.length() - 1]
-    let pos = @nn.embedding(
-      self.position_embedding_table,
-      position_ids(input_ids, self.block_size),
-    )
-    let x = embeddings + pos
-    let q = x.matmul(self.wq)
-    let k = x.matmul(self.wk)
-    let v = x.matmul(self.wv)
-    let scale = @tensor.Tensor::scalar(1.0 / self.n_embd.to_double().sqrt())
-    let scores = q.matmul(k.swap_axes(-2, -1)) * scale + causal_mask(time)
-    let weights = scores.softmax(-1)
-    let attended = weights.matmul(v)
-    let hidden = attended.matmul(self.wo) + x
-    hidden.matmul(self.lm_head)
-  } else {
-    abort("unsupported MiniGPT model kind")
-  }
+  let shape = input_ids.shape()
+  let time = shape[shape.length() - 1]
+  let pos = @nn.embedding(
+    self.position_embedding_table,
+    position_ids(input_ids, self.block_size),
+  )
+  let x = embeddings + pos
+  let q = x.matmul(self.wq)
+  let k = x.matmul(self.wk)
+  let v = x.matmul(self.wv)
+  let scale = @tensor.Tensor::scalar(1.0 / self.n_embd.to_double().sqrt())
+  let scores = q.matmul(k.swap_axes(-2, -1)) * scale + causal_mask(time)
+  let weights = scores.softmax(-1)
+  let attended = weights.matmul(v)
+  let hidden = attended.matmul(self.wo) + x
+  hidden.matmul(self.lm_head)
 }
 
 ///|
@@ -421,23 +267,15 @@ pub fn MiniGPT::loss(
 
 ///|
 pub fn MiniGPT::parameters(self : MiniGPT) -> Array[@tensor.Tensor] {
-  if self.kind == KIND_FULL_RANK_BIGRAM {
-    [self.token_embedding_table]
-  } else if self.kind == KIND_LOW_RANK_BIGRAM {
-    [self.token_embedding_table, self.lm_head]
-  } else if self.kind == KIND_TRANSFORMER {
-    [
-      self.token_embedding_table,
-      self.position_embedding_table,
-      self.wq,
-      self.wk,
-      self.wv,
-      self.wo,
-      self.lm_head,
-    ]
-  } else {
-    abort("unsupported MiniGPT model kind")
-  }
+  [
+    self.token_embedding_table,
+    self.position_embedding_table,
+    self.wq,
+    self.wk,
+    self.wv,
+    self.wo,
+    self.lm_head,
+  ]
 }
 
 ///|

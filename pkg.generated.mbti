@@ -22,8 +22,6 @@ pub fn decode_checkpoint(Bytes) -> (MiniGPT, CharTokenizer)
 
 pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> Bytes
 
-pub fn generate_next_token_id(MiniGPT, Int, @random.Rand, Int, Int?) -> Int
-
 pub fn generate_next_token_id_from_context(MiniGPT, Array[Int], @random.Rand, Int, Int?) -> Int
 
 pub fn generate_text(MiniGPT, CharTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
@@ -64,22 +62,16 @@ pub struct MiniGPT {
   vocab_size : Int
   n_embd : Int
   block_size : Int
-  kind : String
-  full_rank : Bool
 }
 pub fn MiniGPT::block_size(Self) -> Int
 pub fn MiniGPT::clear_graph(Self) -> Unit
 pub fn MiniGPT::forward(Self, @tensor.TokenIds) -> @tensor.Tensor
-pub fn MiniGPT::from_bigram_counts(Int, Array[Int], Double) -> Self
-pub fn MiniGPT::from_full_rank_parameters(Int, Array[Double]) -> Self
-pub fn MiniGPT::from_parameters(Int, Int, Array[Double], Array[Double]) -> Self
 pub fn MiniGPT::from_transformer_parameters(Int, Int, Int, Array[Double], Array[Double], Array[Double], Array[Double], Array[Double], Array[Double], Array[Double]) -> Self
 pub fn MiniGPT::kind_name(Self) -> String
 pub fn MiniGPT::lm_head_data(Self) -> Array[Double]
 pub fn MiniGPT::loss(Self, @tensor.TokenIds, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::n_embd(Self) -> Int
 pub fn MiniGPT::new(Int, @random.Rand) -> Self
-pub fn MiniGPT::new_full_rank(Int, @random.Rand) -> Self
 pub fn MiniGPT::new_transformer_with_options(Int, Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::new_with_options(Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::parameters(Self) -> Array[@tensor.Tensor]

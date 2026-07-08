@@ -48,34 +48,22 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
   if self.version != CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
-  let tokenizer = CharTokenizer::from_vocabulary(self.vocabulary)
-  let model = match self.model_kind {
-    Some("tiny-transformer") =>
-      MiniGPT::from_transformer_parameters(
-        tokenizer.vocab_size(),
-        self.n_embd,
-        self.block_size,
-        self.token_embedding_table,
-        self.position_embedding_table,
-        self.wq,
-        self.wk,
-        self.wv,
-        self.wo,
-        self.lm_head,
-      )
-    Some("full-rank-bigram") =>
-      MiniGPT::from_full_rank_parameters(
-        tokenizer.vocab_size(),
-        self.token_embedding_table,
-      )
-    _ =>
-      MiniGPT::from_parameters(
-        tokenizer.vocab_size(),
-        self.n_embd,
-        self.token_embedding_table,
-        self.lm_head,
-      )
+  if self.model_kind != Some("tiny-transformer") {
+    abort("unsupported MiniGPT checkpoint model kind")
   }
+  let tokenizer = CharTokenizer::from_vocabulary(self.vocabulary)
+  let model = MiniGPT::from_transformer_parameters(
+    tokenizer.vocab_size(),
+    self.n_embd,
+    self.block_size,
+    self.token_embedding_table,
+    self.position_embedding_table,
+    self.wq,
+    self.wk,
+    self.wv,
+    self.wo,
+    self.lm_head,
+  )
   (model, tokenizer)
 }
 
@@ -110,6 +98,9 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     abort("invalid MiniGPT checkpoint magic")
   }
   let version = reader.read_int_le()
+  if version != CHECKPOINT_VERSION {
+    abort("unsupported MiniGPT checkpoint version")
+  }
   let model_kind = reader.read_string()
   let vocab_size = reader.read_int_le()
   let vocabulary : Array[String] = []
@@ -117,23 +108,13 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     vocabulary.push(reader.read_string())
   }
   let n_embd = reader.read_int_le()
-  let block_size = if version == 1 {
-    1
-  } else if version == CHECKPOINT_VERSION {
-    reader.read_int_le()
-  } else {
-    abort("unsupported MiniGPT checkpoint version")
-  }
+  let block_size = reader.read_int_le()
   let token_embedding_table = reader.read_doubles()
-  let position_embedding_table = if version == 1 {
-    []
-  } else {
-    reader.read_doubles()
-  }
-  let wq = if version == 1 { [] } else { reader.read_doubles() }
-  let wk = if version == 1 { [] } else { reader.read_doubles() }
-  let wv = if version == 1 { [] } else { reader.read_doubles() }
-  let wo = if version == 1 { [] } else { reader.read_doubles() }
+  let position_embedding_table = reader.read_doubles()
+  let wq = reader.read_doubles()
+  let wk = reader.read_doubles()
+  let wv = reader.read_doubles()
+  let wo = reader.read_doubles()
   let lm_head = reader.read_doubles()
   if !reader.is_done() {
     abort("checkpoint contains trailing bytes")

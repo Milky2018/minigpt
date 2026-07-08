@@ -139,24 +139,11 @@ A trainable tensor value whose data may be mutated by an optimizer while normal
 tensor expressions remain immutable.
 _Avoid_: Mutable temporary tensor
 
-**Low-rank Bigram Model**:
-The first runnable MiniGPT model factorizes next-token logits as token
-embedding plus output projection, using `[vocab_size, n_embd]` and
-`[n_embd, vocab_size]` parameters instead of a dense `[vocab_size, vocab_size]`
-bigram table.
-_Avoid_: Full-vocabulary bigram matrix
-
-**Full-rank Bigram Model**:
-A MiniGPT backend whose trainable logits are a full `[vocab_size, vocab_size]`
-next-token matrix initialized from adjacent-token maximum-likelihood counts and
-then saved as normal model parameters.
-_Avoid_: Corpus substring lookup or side-channel sampler
-
 **Tiny Transformer Model**:
 The default MiniGPT backend: token and position embeddings, one causal
 self-attention block, and a linear language-model head trained with
 next-token cross entropy.
-_Avoid_: Full-rank bigram as the production CLI default
+_Avoid_: Corpus substring lookup or side-channel sampler
 
 **Gradient Checker**:
 A testing utility that compares autodiff gradients against finite-difference

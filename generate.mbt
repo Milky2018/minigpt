@@ -55,23 +55,6 @@ fn sample_from_logits_with_options(
 }
 
 ///|
-pub fn generate_next_token_id(
-  model : MiniGPT,
-  current_id : Int,
-  rng : @random.Rand,
-  top_k : Int,
-  excluded_id : Int?,
-) -> Int {
-  generate_next_token_id_from_context(
-    model,
-    [current_id],
-    rng,
-    top_k,
-    excluded_id,
-  )
-}
-
-///|
 pub fn generate_next_token_id_from_context(
   model : MiniGPT,
   context_ids : Array[Int],

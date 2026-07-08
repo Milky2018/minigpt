@@ -24,21 +24,3 @@ test "checkpoint roundtrips tokenizer and model weights" {
   @test.assert_eq(loaded_model.wo_data(), model.wo_data())
   @test.assert_eq(loaded_model.lm_head_data(), model.lm_head_data())
 }
-
-///|
-test "checkpoint roundtrips full-rank bigram model" {
-  let tokenizer = CharTokenizer::from_text("春風春雨")
-  let model = MiniGPT::from_bigram_counts(
-    tokenizer.vocab_size(),
-    tokenizer.encode("春風春雨"),
-    0.1,
-  )
-  let bytes = encode_checkpoint(model, tokenizer)
-  let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
-  @test.assert_eq(loaded_model.kind_name(), "full-rank-bigram")
-  @test.assert_eq(loaded_tokenizer.vocabulary(), tokenizer.vocabulary())
-  @test.assert_eq(
-    loaded_model.token_embedding_data(),
-    model.token_embedding_data(),
-  )
-}
