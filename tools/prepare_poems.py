@@ -30,6 +30,21 @@ def is_common_cjk_ideograph(char: str) -> bool:
     return "\u4e00" <= char <= "\u9fff"
 
 
+def is_cjk_ideograph(char: str) -> bool:
+    name = unicodedata.name(char, "")
+    return (
+        name.startswith("CJK UNIFIED IDEOGRAPH")
+        or name.startswith("CJK COMPATIBILITY IDEOGRAPH")
+    )
+
+
+def has_rare_cjk_ideograph(text: str) -> bool:
+    return any(
+        is_cjk_ideograph(char) and not is_common_cjk_ideograph(char)
+        for char in text
+    )
+
+
 def keep_poem_char(char: str) -> bool:
     return is_common_cjk_ideograph(char) or char in ALLOWED_PUNCTUATION
 
@@ -46,12 +61,16 @@ def fetch_json(url: str, retries: int = 4) -> list[dict]:
     raise RuntimeError(f"failed to fetch {url}: {last_error}")
 
 
-def clean_line(line: str) -> str:
+def normalize_line(line: str) -> str:
     line = unicodedata.normalize("NFC", line)
     line = line.translate(BAD_CHARS)
     line = EDITORIAL_NOTE.sub("", line)
     line = SPACES.sub("", line)
-    return "".join(char for char in line.strip() if keep_poem_char(char))
+    return line.strip()
+
+
+def clean_line(line: str) -> str:
+    return "".join(char for char in line if keep_poem_char(char))
 
 
 def cjk_count(line: str) -> int:
@@ -70,7 +89,10 @@ def poem_text(item: dict) -> str | None:
     for paragraph in paragraphs:
         if not isinstance(paragraph, str):
             continue
-        line = clean_line(paragraph)
+        line = normalize_line(paragraph)
+        if has_rare_cjk_ideograph(line):
+            return None
+        line = clean_line(line)
         if cjk_count(line) >= 4:
             lines.append(line)
     if len(lines) < 2:

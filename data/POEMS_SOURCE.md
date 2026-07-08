@@ -11,6 +11,8 @@ from `poems_2m.txt`.
 
 The generated corpus keeps common CJK ideographs, common Chinese punctuation,
 and line breaks. Other symbols are removed during preparation.
+Poems containing rare CJK extension or compatibility ideographs are skipped
+instead of being shortened by character deletion.
 
 The upstream project is licensed under the MIT License:
 
