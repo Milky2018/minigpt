@@ -1,8 +1,8 @@
 ///|
-const DEFAULT_DATA_PATH : String = "data/poems_2m.txt"
+const DEFAULT_DATA_PATH : String = "data/tiny_shakespeare.txt"
 
 ///|
-const DEFAULT_PROMPT : String = "春"
+const DEFAULT_PROMPT : String = "ROMEO:"
 
 ///|
 const DEFAULT_MAX_NEW_TOKENS : Int = 80
@@ -21,7 +21,7 @@ fn cli_command() -> @argparse.Command {
   Command("minigpt", about="MiniGPT teaching demo", subcommand_required=true, subcommands=[
     Command(
       "train",
-      about="train a fresh model on the poetry corpus",
+      about="train a fresh model on the Tiny Shakespeare corpus",
       options=training_options(),
     ),
     Command(

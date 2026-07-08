@@ -7,7 +7,7 @@ vars: {
 
 title: "MiniGPT teaching architecture"
 
-poems: "1. Poems text"
+text: "1. Shakespeare text"
 tokenizer: "2. Char tokenizer"
 ids: "3. Token ids"
 batch: "4. Batch x/y"
@@ -26,7 +26,7 @@ complete: "E. Completed text"
 internals: "Model internals"
 block: "GPT block"
 
-poems -> tokenizer: "scan chars"
+text -> tokenizer: "scan chars"
 tokenizer -> ids: "encode corpus"
 ids -> batch: "make x and y"
 batch -> model: "x"

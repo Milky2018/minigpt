@@ -1,7 +1,7 @@
 ///|
 test "checkpoint roundtrips tokenizer and model weights" {
   let rng = @random.Rand::new()
-  let tokenizer = CharTokenizer::from_text("春江花月夜")
+  let tokenizer = CharTokenizer::from_text("ROMEO")
   let model = MiniGPT::new_with_options(tokenizer.vocab_size(), 4, rng)
   let bytes = encode_checkpoint(model, tokenizer)
   let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
