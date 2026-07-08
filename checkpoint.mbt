@@ -4,6 +4,7 @@ const CHECKPOINT_VERSION : Int = 1
 ///|
 pub struct MiniGPTCheckpoint {
   version : Int
+  model_kind : String?
   vocabulary : Array[String]
   n_embd : Int
   token_embedding_table : Array[Double]
@@ -17,6 +18,7 @@ pub fn MiniGPTCheckpoint::from_model(
 ) -> MiniGPTCheckpoint {
   {
     version: CHECKPOINT_VERSION,
+    model_kind: Some(model.kind_name()),
     vocabulary: tokenizer.vocabulary(),
     n_embd: model.n_embd(),
     token_embedding_table: model.token_embedding_data(),
@@ -32,12 +34,20 @@ pub fn MiniGPTCheckpoint::to_model_and_tokenizer(
     abort("unsupported MiniGPT checkpoint version")
   }
   let tokenizer = CharTokenizer::from_vocabulary(self.vocabulary)
-  let model = MiniGPT::from_parameters(
-    tokenizer.vocab_size(),
-    self.n_embd,
-    self.token_embedding_table,
-    self.lm_head,
-  )
+  let model = match self.model_kind {
+    Some("full-rank-bigram") =>
+      MiniGPT::from_full_rank_parameters(
+        tokenizer.vocab_size(),
+        self.token_embedding_table,
+      )
+    _ =>
+      MiniGPT::from_parameters(
+        tokenizer.vocab_size(),
+        self.n_embd,
+        self.token_embedding_table,
+        self.lm_head,
+      )
+  }
   (model, tokenizer)
 }
 
@@ -48,7 +58,12 @@ pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> String {
 
 ///|
 pub fn decode_checkpoint(text : String) -> (MiniGPT, CharTokenizer) raise {
+  decode_checkpoint_data(text).to_model_and_tokenizer()
+}
+
+///|
+pub fn decode_checkpoint_data(text : String) -> MiniGPTCheckpoint raise {
   let json = @json.parse(text[:])
   let checkpoint : MiniGPTCheckpoint = @json.from_json(json)
-  checkpoint.to_model_and_tokenizer()
+  checkpoint
 }

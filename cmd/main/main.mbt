@@ -8,6 +8,9 @@ const DEFAULT_PROMPT : String = "春"
 const DEFAULT_MAX_NEW_TOKENS : Int = 80
 
 ///|
+const DEFAULT_BIGRAM_TOP_K : Int = 5
+
+///|
 const DEFAULT_MODEL_PATH : String = "minigpt-model.json"
 
 ///|
@@ -60,9 +63,6 @@ fn training_options() -> Array[@argparse.OptionArg] {
     OptionArg("block-size", long="block-size", about="context length", default_values=[
       @minigpt.BLOCK_SIZE.to_string(),
     ]),
-    OptionArg("n-embd", long="n-embd", about="embedding dimension", default_values=[
-      @minigpt.N_EMBD.to_string(),
-    ]),
     OptionArg(
       "learning-rate",
       long="learning-rate",
@@ -87,6 +87,9 @@ fn generate_options() -> Array[@argparse.OptionArg] {
       about="number of generated characters",
       default_values=[DEFAULT_MAX_NEW_TOKENS.to_string()],
     ),
+    OptionArg("top-k", long="top-k", about="bigram sampler top-k", default_values=[
+      DEFAULT_BIGRAM_TOP_K.to_string(),
+    ]),
   ]
 }
 
@@ -166,25 +169,48 @@ fn print_loss_summary(losses : Array[Double]) -> Unit {
 }
 
 ///|
+fn is_sentence_end(ch : Char) -> Bool {
+  ch == '。' ||
+  ch == '！' ||
+  ch == '？' ||
+  ch == '；' ||
+  ch == '.' ||
+  ch == '!' ||
+  ch == '?' ||
+  ch == ';'
+}
+
+///|
 fn print_completion_trace(
   model : @minigpt.MiniGPT,
   tokenizer : @minigpt.CharTokenizer,
   prompt : String,
   max_new_tokens : Int,
+  top_k : Int,
+  excluded_id : Int?,
   rng : @random.Rand,
 ) -> Unit {
-  let mut token_ids = tokenizer.encode(prompt) catch {
+  let token_ids = tokenizer.encode(prompt) catch {
     _ => abort("prompt contains characters outside the tokenizer vocabulary")
   }
   println("completion:")
   println(prompt)
   for _ in 0..<max_new_tokens {
-    let next = @minigpt.generate_token_ids(model, token_ids, 1, rng)
-    token_ids = next
+    let current_id = token_ids[token_ids.length() - 1]
+    let next_id = @minigpt.generate_next_token_id(
+      model, current_id, rng, top_k, excluded_id,
+    )
+    token_ids.push(next_id)
     let text = tokenizer.decode(token_ids) catch {
       _ => abort("failed to decode generated text")
     }
     println(text)
+    let token = tokenizer.decode([next_id]) catch {
+      _ => abort("failed to decode generated token")
+    }
+    if is_sentence_end(token.iter().next().unwrap()) {
+      break
+    }
   }
 }
 
@@ -203,11 +229,12 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("tokens: \{ids.length()}")
   println("steps: \{config.steps}")
   println("checkpoint: \{out_path}")
-  let model = @minigpt.MiniGPT::new_with_options(
+  let model = @minigpt.MiniGPT::from_bigram_counts(
     tokenizer.vocab_size(),
-    int_value(matches, "n-embd"),
-    rng,
+    ids,
+    0.1,
   )
+  println("model kind: \{model.kind_name()}")
   println("n_embd: \{model.n_embd()}")
   let stats = @minigpt.train_token_ids(model, ids, config, rng)
   print_loss_summary(stats.losses)
@@ -222,7 +249,13 @@ fn run_generate(matches : @argparse.Matches) -> Unit {
   let model_path = value(matches, "model")
   let prompt = value(matches, "prompt")
   let max_new_tokens = int_value(matches, "max-new-tokens")
+  let top_k = int_value(matches, "top-k")
   let rng = @random.Rand::new()
+  if !@fs.path_exists(model_path) {
+    abort(
+      "checkpoint '\{model_path}' not found; run `moon run --release cmd/main -- train --out \{model_path}` first",
+    )
+  }
   let checkpoint = @fs.read_file_to_string(model_path, encoding="utf8") catch {
     _ => abort("failed to read checkpoint '\{model_path}'")
   }
@@ -233,7 +266,16 @@ fn run_generate(matches : @argparse.Matches) -> Unit {
   println("model: \{model_path}")
   println("vocab size: \{tokenizer.vocab_size()}")
   println("n_embd: \{model.n_embd()}")
-  print_completion_trace(model, tokenizer, prompt, max_new_tokens, rng)
+  println("model kind: \{model.kind_name()}")
+  let newline_ids = tokenizer.encode("\n") catch { _ => [] }
+  let excluded_id = if newline_ids.length() > 0 {
+    Some(newline_ids[0])
+  } else {
+    None
+  }
+  print_completion_trace(
+    model, tokenizer, prompt, max_new_tokens, top_k, excluded_id, rng,
+  )
 }
 
 ///|

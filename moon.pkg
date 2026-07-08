@@ -3,6 +3,7 @@ import {
   "Milky2018/minigpt/optim",
   "Milky2018/minigpt/tensor",
   "moonbitlang/core/json",
+  "moonbitlang/core/math",
   "moonbitlang/core/random",
 }
 

@@ -146,6 +146,12 @@ embedding plus output projection, using `[vocab_size, n_embd]` and
 bigram table.
 _Avoid_: Full-vocabulary bigram matrix
 
+**Full-rank Bigram Model**:
+A MiniGPT backend whose trainable logits are a full `[vocab_size, vocab_size]`
+next-token matrix initialized from adjacent-token maximum-likelihood counts and
+then saved as normal model parameters.
+_Avoid_: Corpus substring lookup or side-channel sampler
+
 **Gradient Checker**:
 A testing utility that compares autodiff gradients against finite-difference
 numerical gradients for small tensor programs.
@@ -169,12 +175,12 @@ _Avoid_: Re-training inside generation
 
 **Model Checkpoint**:
 A JSON file containing checkpoint version, character vocabulary, embedding
-dimension, token embedding weights, and output projection weights.
+dimension, model kind, token embedding weights, and output projection weights.
 _Avoid_: Saving weights without tokenizer vocabulary
 
 **Completion Trace**:
 The CLI output that prints the full accumulated completion after each generated
-token, making the autocomplete process visible without separate step labels.
+token until a sentence-ending punctuation mark or the token limit.
 _Avoid_: Final-only generation output
 
 **CLI Corpus Window**:
