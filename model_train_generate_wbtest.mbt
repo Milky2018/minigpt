@@ -52,10 +52,10 @@ test "train_token_ids records one loss per step" {
 ///|
 test "recommended training config uses public constants" {
   let config = TrainingConfig::recommended()
-  assert_eq(config.batch_size, RECOMMENDED_BATCH_SIZE)
-  assert_eq(config.block_size, RECOMMENDED_BLOCK_SIZE)
-  assert_eq(config.steps, RECOMMENDED_TRAINING_STEPS)
-  assert_true(config.learning_rate == RECOMMENDED_LEARNING_RATE)
+  assert_eq(config.batch_size, BATCH_SIZE)
+  assert_eq(config.block_size, BLOCK_SIZE)
+  assert_eq(config.steps, TRAINING_STEPS)
+  assert_true(config.learning_rate == LEARNING_RATE)
 }
 
 ///|

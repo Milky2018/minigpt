@@ -3,6 +3,7 @@ package "Milky2018/minigpt/optim"
 
 import {
   "Milky2018/minigpt/tensor",
+  "moonbitlang/core/ref",
 }
 
 // Values
@@ -12,12 +13,14 @@ pub fn sgd_step(Array[@tensor.Tensor], Double) -> Unit
 
 // Types and methods
 pub struct AdamW {
-  // private fields
+  state : @ref.Ref[AdamWState]
 }
 pub fn AdamW::new(Array[@tensor.Tensor], Double) -> Self
 pub fn AdamW::new_with_options(Array[@tensor.Tensor], Double, Double, Double, Double, Double) -> Self
 pub fn AdamW::step(Self) -> Unit
 pub fn AdamW::step_count(Self) -> Int
+
+type AdamWState
 
 // Type aliases
 

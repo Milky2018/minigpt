@@ -16,7 +16,7 @@ pub fn sgd_step(params : Array[@tensor.Tensor], lr : Double) -> Unit {
 }
 
 ///|
-priv struct AdamWState {
+struct AdamWState {
   params : Array[@tensor.Tensor]
   m : Array[Array[Double]]
   v : Array[Array[Double]]
@@ -32,7 +32,7 @@ priv struct AdamWState {
 
 ///|
 pub struct AdamW {
-  priv state : Ref[AdamWState]
+  state : Ref[AdamWState]
 }
 
 ///|

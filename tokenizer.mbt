@@ -6,8 +6,8 @@ pub(all) suberror TokenizerError {
 
 ///|
 pub struct CharTokenizer {
-  priv char_to_id : Map[Char, Int]
-  priv id_to_char : Array[Char]
+  char_to_id : Map[Char, Int]
+  id_to_char : Array[Char]
 }
 
 ///|

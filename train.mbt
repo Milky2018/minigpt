@@ -1,14 +1,14 @@
 ///|
-pub const RECOMMENDED_BATCH_SIZE : Int = 32
+pub const BATCH_SIZE : Int = 32
 
 ///|
-pub const RECOMMENDED_BLOCK_SIZE : Int = 64
+pub const BLOCK_SIZE : Int = 64
 
 ///|
-pub const RECOMMENDED_TRAINING_STEPS : Int = 1000
+pub const TRAINING_STEPS : Int = 1000
 
 ///|
-pub const RECOMMENDED_LEARNING_RATE : Double = 1.0e-3
+pub const LEARNING_RATE : Double = 1.0e-3
 
 ///|
 pub struct TrainingConfig {
@@ -42,12 +42,7 @@ pub fn TrainingConfig::new(
 
 ///|
 pub fn TrainingConfig::recommended() -> TrainingConfig {
-  TrainingConfig::new(
-    RECOMMENDED_BATCH_SIZE,
-    RECOMMENDED_BLOCK_SIZE,
-    RECOMMENDED_TRAINING_STEPS,
-    RECOMMENDED_LEARNING_RATE,
-  )
+  TrainingConfig::new(BATCH_SIZE, BLOCK_SIZE, TRAINING_STEPS, LEARNING_RATE)
 }
 
 ///|

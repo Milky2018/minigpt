@@ -8,13 +8,13 @@ import {
 }
 
 // Values
-pub const RECOMMENDED_BATCH_SIZE : Int = 32
+pub const BATCH_SIZE : Int = 32
 
-pub const RECOMMENDED_BLOCK_SIZE : Int = 64
+pub const BLOCK_SIZE : Int = 64
 
-pub const RECOMMENDED_LEARNING_RATE : Double = 1.0e-3
+pub const LEARNING_RATE : Double = 1.0e-3
 
-pub const RECOMMENDED_TRAINING_STEPS : Int = 1000
+pub const TRAINING_STEPS : Int = 1000
 
 pub fn generate_text(MiniGPT, CharTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
 
@@ -32,7 +32,8 @@ pub(all) suberror TokenizerError {
 
 // Types and methods
 pub struct CharTokenizer {
-  // private fields
+  char_to_id : Map[Char, Int]
+  id_to_char : Array[Char]
 }
 pub fn CharTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
 pub fn CharTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
@@ -40,7 +41,9 @@ pub fn CharTokenizer::from_text(String) -> Self
 pub fn CharTokenizer::vocab_size(Self) -> Int
 
 pub struct MiniGPT {
-  // private fields
+  ctx : @tensor.AutogradContext
+  token_embedding_table : @tensor.Tensor
+  vocab_size : Int
 }
 pub fn MiniGPT::clear_graph(Self) -> Unit
 pub fn MiniGPT::forward(Self, @tensor.TokenIds) -> @tensor.Tensor

@@ -3,6 +3,7 @@ package "Milky2018/minigpt/tensor"
 
 import {
   "moonbitlang/core/random",
+  "moonbitlang/core/ref",
 }
 
 // Values
@@ -12,14 +13,21 @@ pub fn check_grad(Array[Double], Array[Int], (Tensor) -> Tensor, eps? : Double, 
 
 // Types and methods
 pub struct AutogradContext {
-  // private fields
+  id : Int
+  state : @ref.Ref[AutogradState]
 }
 pub fn AutogradContext::clear_graph(Self) -> Unit
 pub fn AutogradContext::new() -> Self
 pub fn AutogradContext::zero_grad(Self) -> Unit
 
+type AutogradState
+
 pub struct Tensor {
-  // private fields
+  data : Array[Double]
+  shape : Array[Int]
+  requires_grad : Bool
+  context : AutogradContext?
+  node_id : Int?
 }
 pub fn Tensor::add(Self, Self) -> Self
 pub fn Tensor::backward(Self) -> Unit
@@ -58,7 +66,8 @@ pub impl Neg for Tensor
 pub impl Sub for Tensor
 
 pub struct TokenIds {
-  // private fields
+  data : Array[Int]
+  shape : Array[Int]
 }
 pub fn TokenIds::data(Self) -> Array[Int]
 pub fn TokenIds::new(Array[Int], Array[Int]) -> Self

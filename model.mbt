@@ -1,8 +1,8 @@
 ///|
 pub struct MiniGPT {
-  priv ctx : @tensor.AutogradContext
-  priv token_embedding_table : @tensor.Tensor
-  priv vocab_size : Int
+  ctx : @tensor.AutogradContext
+  token_embedding_table : @tensor.Tensor
+  vocab_size : Int
 }
 
 ///|
