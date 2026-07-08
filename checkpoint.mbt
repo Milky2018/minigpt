@@ -1,5 +1,5 @@
 ///|
-const CHECKPOINT_VERSION : Int = 3
+const CHECKPOINT_VERSION : Int = 5
 
 ///|
 const CHECKPOINT_MAGIC : Int = 1296649799
@@ -8,7 +8,10 @@ const CHECKPOINT_MAGIC : Int = 1296649799
 priv struct MiniGPTCheckpoint {
   version : Int
   model_kind : String?
-  vocabulary : Array[String]
+  tokenizer_kind : String?
+  vocabulary : Array[Bytes]
+  merges : Array[BpeMerge]
+  sampleable_token_ids : Array[Int]
   n_embd : Int
   n_head : Int
   n_layer : Int
@@ -19,12 +22,15 @@ priv struct MiniGPTCheckpoint {
 ///|
 fn MiniGPTCheckpoint::from_model(
   model : MiniGPT,
-  tokenizer : CharTokenizer,
+  tokenizer : BpeTokenizer,
 ) -> MiniGPTCheckpoint {
   {
     version: CHECKPOINT_VERSION,
     model_kind: Some(model.kind_name()),
+    tokenizer_kind: Some(tokenizer.kind_name()),
     vocabulary: tokenizer.vocabulary(),
+    merges: tokenizer.merges(),
+    sampleable_token_ids: tokenizer.sampleable_token_ids(),
     n_embd: model.n_embd(),
     n_head: model.n_head(),
     n_layer: model.n_layer(),
@@ -36,14 +42,21 @@ fn MiniGPTCheckpoint::from_model(
 ///|
 fn MiniGPTCheckpoint::to_model_and_tokenizer(
   self : MiniGPTCheckpoint,
-) -> (MiniGPT, CharTokenizer) {
+) -> (MiniGPT, BpeTokenizer) {
   if self.version != CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
   if self.model_kind != Some("gpt-transformer") {
     abort("unsupported MiniGPT checkpoint model kind")
   }
-  let tokenizer = CharTokenizer::from_vocabulary(self.vocabulary)
+  if self.tokenizer_kind != Some(TOKENIZER_KIND_BPE) {
+    abort("unsupported MiniGPT checkpoint tokenizer kind")
+  }
+  let tokenizer = BpeTokenizer::from_parts(
+    self.vocabulary,
+    self.merges,
+    self.sampleable_token_ids,
+  )
   let model = MiniGPT::from_parameter_data(
     tokenizer.vocab_size(),
     self.n_embd,
@@ -56,16 +69,26 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
 }
 
 ///|
-pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
+pub fn encode_checkpoint(model : MiniGPT, tokenizer : BpeTokenizer) -> Bytes {
   let checkpoint = MiniGPTCheckpoint::from_model(model, tokenizer)
   let params = checkpoint.parameters
   let buffer = Buffer::Buffer()
   buffer.write_int_le(CHECKPOINT_MAGIC)
   buffer.write_int_le(CHECKPOINT_VERSION)
   write_string(buffer, model.kind_name())
+  write_string(buffer, tokenizer.kind_name())
   buffer.write_int_le(checkpoint.vocabulary.length())
   for item in checkpoint.vocabulary {
-    write_string(buffer, item)
+    write_bytes(buffer, item)
+  }
+  buffer.write_int_le(checkpoint.merges.length())
+  for merge in checkpoint.merges {
+    buffer.write_int_le(merge.left)
+    buffer.write_int_le(merge.right)
+  }
+  buffer.write_int_le(checkpoint.sampleable_token_ids.length())
+  for id in checkpoint.sampleable_token_ids {
+    buffer.write_int_le(id)
   }
   buffer.write_int_le(checkpoint.n_embd)
   buffer.write_int_le(checkpoint.n_head)
@@ -95,7 +118,7 @@ pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
 }
 
 ///|
-pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
+pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, BpeTokenizer) {
   let reader = BytesReader::new(bytes)
   let magic = reader.read_int_le()
   if magic != CHECKPOINT_MAGIC {
@@ -106,10 +129,21 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     abort("unsupported MiniGPT checkpoint version")
   }
   let model_kind = reader.read_string()
+  let tokenizer_kind = reader.read_string()
   let vocab_size = reader.read_int_le()
-  let vocabulary : Array[String] = []
+  let vocabulary : Array[Bytes] = []
   for _ in 0..<vocab_size {
-    vocabulary.push(reader.read_string())
+    vocabulary.push(reader.read_bytes())
+  }
+  let merge_count = reader.read_int_le()
+  let merges : Array[BpeMerge] = []
+  for _ in 0..<merge_count {
+    merges.push({ left: reader.read_int_le(), right: reader.read_int_le() })
+  }
+  let sampleable_count = reader.read_int_le()
+  let sampleable_token_ids : Array[Int] = []
+  for _ in 0..<sampleable_count {
+    sampleable_token_ids.push(reader.read_int_le())
   }
   let n_embd = reader.read_int_le()
   let n_head = reader.read_int_le()
@@ -143,7 +177,10 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
   let checkpoint : MiniGPTCheckpoint = {
     version,
     model_kind: Some(model_kind),
+    tokenizer_kind: Some(tokenizer_kind),
     vocabulary,
+    merges,
+    sampleable_token_ids,
     n_embd,
     n_head,
     n_layer,
@@ -156,6 +193,11 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
 ///|
 fn write_string(buffer : Buffer, text : String) -> Unit {
   let bytes = @utf8.encode(text[:])
+  write_bytes(buffer, bytes)
+}
+
+///|
+fn write_bytes(buffer : Buffer, bytes : Bytes) -> Unit {
   buffer.write_int_le(bytes.length())
   buffer.write_bytes(bytes[:])
 }
@@ -213,15 +255,21 @@ fn BytesReader::read_int_le(self : BytesReader) -> Int {
 
 ///|
 fn BytesReader::read_string(self : BytesReader) -> String {
+  let bytes = self.read_bytes()
+  @utf8.decode(bytes[:]) catch {
+    _ => abort("invalid checkpoint UTF-8 string")
+  }
+}
+
+///|
+fn BytesReader::read_bytes(self : BytesReader) -> Bytes {
   let length = self.read_int_le()
   if length < 0 || self.offset + length > self.bytes.length() {
-    abort("invalid checkpoint string length")
+    abort("invalid checkpoint bytes length")
   }
   let view = self.bytes.view(start=self.offset, end=self.offset + length)
   self.offset += length
-  @utf8.decode(view) catch {
-    _ => abort("invalid checkpoint UTF-8 string")
-  }
+  view.to_owned()
 }
 
 ///|

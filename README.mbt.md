@@ -1,8 +1,8 @@
 # MiniGPT in MoonBit
 
-这是一个用 MoonBit 写的极简自动补全程序。它默认使用 Andrej Karpathy 的 Tiny Shakespeare UTF-8 文本训练字符级语言模型，然后根据 prompt 逐步补全文本。
+这是一个用 MoonBit 写的极简自动补全程序。它默认使用 Andrej Karpathy 的 Tiny Shakespeare UTF-8 文本训练一个小型 byte-level BPE tokenizer 和语言模型，然后根据 prompt 逐步补全文本。
 
-当前默认模型是一个小型字符级 GPT transformer：token embedding + position embedding + 2 层 decoder block。每个 block 包含 pre-norm multi-head causal self-attention、MLP/GELU 和残差连接，最后用 tied token embedding 作为输出头。它不是语料检索，不会复制 prompt 后面的原文片段。
+当前默认模型是一个小型 GPT transformer：token embedding + position embedding + 2 层 decoder block。每个 block 包含 pre-norm multi-head causal self-attention、MLP/GELU 和残差连接，最后用 tied token embedding 作为输出头。它不是语料检索，不会复制 prompt 后面的原文片段。
 
 ## 数据
 
@@ -20,7 +20,7 @@ data/tiny_shakespeare.txt
 
 ## 训练
 
-训练会生成一个二进制 checkpoint。默认输出文件是 `minigpt-model.bin`：
+训练会先从语料中训练一个小型 byte-level BPE tokenizer，然后生成一个二进制 checkpoint。默认输出文件是 `minigpt-model.bin`：
 
 ```bash
 moon run --release cmd/main -- train
@@ -41,6 +41,7 @@ moon run --release cmd/main -- train --out minigpt-model.bin
 --steps           梯度训练步数，默认 10
 --batch-size      batch size，默认 4
 --block-size      上下文长度，默认 8
+--vocab-size      BPE tokenizer 词表大小，默认 512
 --learning-rate   学习率，默认 0.001
 ```
 
@@ -54,7 +55,7 @@ moon run --release cmd/main -- generate --model minigpt-model.bin --prompt ROMEO
 
 如果 `minigpt-model.bin` 不存在，先运行上面的 `train` 命令生成它。
 
-每生成一个字，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
+每生成一个 token，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
 
 ```text
 completion:
@@ -71,8 +72,9 @@ ROMEO:The l
 ```text
 --model           checkpoint 路径，默认 minigpt-model.bin
 --prompt          补全起始文本，默认 ROMEO:
---max-new-tokens  生成字符数，默认 80
---top-k           从模型 logits 最高的几个候选中采样，默认 5
+--max-new-tokens  生成 token 数，默认 80
+--top-k           从模型 logits 最高的几个候选中采样，默认 20
+--temperature     采样温度，默认 0.8
 ```
 
 ## Checkpoint 大小
@@ -83,14 +85,15 @@ ROMEO:The l
 
 ```text
 max chars = 0
-vocab size ~= 65
+tokenizer = byte-bpe
+vocab size = 512
 model kind = gpt-transformer
 n_embd = 32
 n_head = 4
 n_layer = 2
 block size = 8
-parameters ~= 28K Doubles
-binary checkpoint ~= 220KB
+parameters ~= 42K Doubles
+binary checkpoint ~= 340KB
 ```
 
 如果希望 checkpoint 小一点，可以限制 `--max-chars`：
@@ -99,12 +102,12 @@ binary checkpoint ~= 220KB
 moon run --release cmd/main -- train --max-chars 2000
 ```
 
-注意：如果训练语料窗口太小，prompt 里的字符可能不在 tokenizer 词表里，生成时需要换成词表中出现过的字符，或者增大 `--max-chars`。
+BPE tokenizer 和 merge list 会保存在 checkpoint 里；`generate` 只加载 checkpoint，不会重新训练 tokenizer。byte-level BPE 可以编码任意 UTF-8 prompt，不会再因为 prompt 含有训练语料外的字符而失败。
 
 ## 项目结构
 
 ```text
-tokenizer.mbt       字符级 tokenizer
+tokenizer.mbt       byte-level BPE tokenizer
 tensor/             Tensor 和自动微分基础
 nn/                 神经网络基础算子
 optim/              优化器

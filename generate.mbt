@@ -3,15 +3,33 @@ fn sample_from_logits_with_options(
   logits : @tensor.Tensor,
   rng : @random.Rand,
   top_k : Int,
+  temperature : Double,
   excluded_id : Int?,
+  allowed_ids : Array[Int]?,
 ) -> Int {
+  if temperature <= 0.0 {
+    abort("temperature must be positive")
+  }
   let data = logits.data()
   let order = Array::new(capacity=data.length())
-  for i in 0..<data.length() {
-    match excluded_id {
-      Some(id) if i == id => ()
-      _ => order.push(i)
-    }
+  match allowed_ids {
+    Some(ids) =>
+      for id in ids {
+        if id < 0 || id >= data.length() {
+          abort("allowed token id out of vocabulary range")
+        }
+        match excluded_id {
+          Some(excluded) if id == excluded => ()
+          _ => order.push(id)
+        }
+      }
+    None =>
+      for i in 0..<data.length() {
+        match excluded_id {
+          Some(id) if i == id => ()
+          _ => order.push(i)
+        }
+      }
   }
   if order.length() == 0 {
     abort("sample_from_logits requires at least one candidate")
@@ -32,14 +50,14 @@ fn sample_from_logits_with_options(
   } else {
     top_k
   }
-  let mut max_logit = data[order[0]]
+  let mut max_logit = data[order[0]] / temperature
   for i in 1..<limit {
-    max_logit = max_logit.max(data[order[i]])
+    max_logit = max_logit.max(data[order[i]] / temperature)
   }
   let probs = Array::make(limit, 0.0)
   let mut sum = 0.0
   for i in 0..<limit {
-    let value = @math.exp(data[order[i]] - max_logit)
+    let value = @math.exp(data[order[i]] / temperature - max_logit)
     probs[i] = value
     sum += value
   }
@@ -62,6 +80,41 @@ pub fn generate_next_token_id_from_context(
   top_k : Int,
   excluded_id : Int?,
 ) -> Int {
+  generate_next_token_id_from_context_with_options(
+    model, context_ids, rng, top_k, 1.0, excluded_id,
+  )
+}
+
+///|
+pub fn generate_next_token_id_from_context_with_options(
+  model : MiniGPT,
+  context_ids : Array[Int],
+  rng : @random.Rand,
+  top_k : Int,
+  temperature : Double,
+  excluded_id : Int?,
+) -> Int {
+  generate_next_token_id_from_context_with_sampling_options(
+    model,
+    context_ids,
+    rng,
+    top_k,
+    temperature,
+    excluded_id,
+    None,
+  )
+}
+
+///|
+pub fn generate_next_token_id_from_context_with_sampling_options(
+  model : MiniGPT,
+  context_ids : Array[Int],
+  rng : @random.Rand,
+  top_k : Int,
+  temperature : Double,
+  excluded_id : Int?,
+  allowed_ids : Array[Int]?,
+) -> Int {
   if context_ids.length() == 0 {
     abort("context_ids must not be empty")
   }
@@ -79,7 +132,9 @@ pub fn generate_next_token_id_from_context(
     data[offset:data.length()].to_owned(),
     [vocab_size],
   )
-  sample_from_logits_with_options(last_logits, rng, top_k, excluded_id)
+  sample_from_logits_with_options(
+    last_logits, rng, top_k, temperature, excluded_id, allowed_ids,
+  )
 }
 
 ///|
@@ -88,6 +143,23 @@ pub fn generate_token_ids(
   prompt_ids : Array[Int],
   max_new_tokens : Int,
   rng : @random.Rand,
+) -> Array[Int] {
+  generate_token_ids_with_sampling_options(
+    model,
+    prompt_ids,
+    max_new_tokens,
+    rng,
+    None,
+  )
+}
+
+///|
+pub fn generate_token_ids_with_sampling_options(
+  model : MiniGPT,
+  prompt_ids : Array[Int],
+  max_new_tokens : Int,
+  rng : @random.Rand,
+  allowed_ids : Array[Int]?,
 ) -> Array[Int] {
   if prompt_ids.length() == 0 {
     abort("prompt_ids must not be empty")
@@ -98,7 +170,15 @@ pub fn generate_token_ids(
   let output = prompt_ids.copy()
   for _ in 0..<max_new_tokens {
     output.push(
-      generate_next_token_id_from_context(model, output, rng, 0, None),
+      generate_next_token_id_from_context_with_sampling_options(
+        model,
+        output,
+        rng,
+        0,
+        1.0,
+        None,
+        allowed_ids,
+      ),
     )
   }
   output
@@ -107,11 +187,19 @@ pub fn generate_token_ids(
 ///|
 pub fn generate_text(
   model : MiniGPT,
-  tokenizer : CharTokenizer,
+  tokenizer : BpeTokenizer,
   prompt : String,
   max_new_tokens : Int,
   rng : @random.Rand,
 ) -> String raise TokenizerError {
   let prompt_ids = tokenizer.encode(prompt)
-  tokenizer.decode(generate_token_ids(model, prompt_ids, max_new_tokens, rng))
+  tokenizer.decode(
+    generate_token_ids_with_sampling_options(
+      model,
+      prompt_ids,
+      max_new_tokens,
+      rng,
+      Some(tokenizer.sampleable_token_ids()),
+    ),
+  )
 }

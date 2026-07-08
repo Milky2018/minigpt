@@ -8,13 +8,19 @@ const DEFAULT_PROMPT : String = "ROMEO:"
 const DEFAULT_MAX_NEW_TOKENS : Int = 80
 
 ///|
-const DEFAULT_TOP_K : Int = 5
+const DEFAULT_TOP_K : Int = 20
+
+///|
+const DEFAULT_TEMPERATURE : Double = 0.8
 
 ///|
 const DEFAULT_MODEL_PATH : String = "minigpt-model.bin"
 
 ///|
 const DEFAULT_MAX_CHARS : Int = 0
+
+///|
+const DEFAULT_BPE_VOCAB_SIZE : Int = @minigpt.BPE_VOCAB_SIZE
 
 ///|
 fn cli_command() -> @argparse.Command {
@@ -64,6 +70,12 @@ fn training_options() -> Array[@argparse.OptionArg] {
       @minigpt.BLOCK_SIZE.to_string(),
     ]),
     OptionArg(
+      "vocab-size",
+      long="vocab-size",
+      about="BPE tokenizer vocabulary size",
+      default_values=[DEFAULT_BPE_VOCAB_SIZE.to_string()],
+    ),
+    OptionArg(
       "learning-rate",
       long="learning-rate",
       about="optimizer learning rate",
@@ -89,6 +101,9 @@ fn generate_options() -> Array[@argparse.OptionArg] {
     ),
     OptionArg("top-k", long="top-k", about="sampler top-k", default_values=[
       DEFAULT_TOP_K.to_string(),
+    ]),
+    OptionArg("temperature", long="temperature", about="sampler temperature", default_values=[
+      DEFAULT_TEMPERATURE.to_string(),
     ]),
   ]
 }
@@ -146,16 +161,13 @@ fn limit_text(text : String, max_chars : Int) -> String {
 fn load_token_ids(
   path : String,
   max_chars : Int,
-) -> (@minigpt.CharTokenizer, Array[Int]) {
+  vocab_size : Int,
+) -> (@minigpt.BpeTokenizer, Array[Int]) {
   let text = @fs.read_file_to_string(path, encoding="utf8") catch {
     _ => abort("failed to read corpus '\{path}'")
   }
   let text = limit_text(text, max_chars)
-  let tokenizer = @minigpt.CharTokenizer::from_text(text)
-  let ids = tokenizer.encode(text) catch {
-    _ => abort("tokenizer failed to encode its source corpus")
-  }
-  (tokenizer, ids)
+  @minigpt.BpeTokenizer::train(text, vocab_size)
 }
 
 ///|
@@ -173,21 +185,26 @@ fn print_loss_summary(stats : @minigpt.TrainingStats) -> Unit {
 ///|
 fn print_completion_trace(
   model : @minigpt.MiniGPT,
-  tokenizer : @minigpt.CharTokenizer,
+  tokenizer : @minigpt.BpeTokenizer,
   prompt : String,
   max_new_tokens : Int,
   top_k : Int,
-  excluded_id : Int?,
+  temperature : Double,
   rng : @random.Rand,
 ) -> Unit {
-  let token_ids = tokenizer.encode(prompt) catch {
-    _ => abort("prompt contains characters outside the tokenizer vocabulary")
-  }
+  let token_ids = tokenizer.encode(prompt)
+  let sampleable_token_ids = tokenizer.sampleable_token_ids()
   println("completion:")
   println(prompt)
   for _ in 0..<max_new_tokens {
-    let next_id = @minigpt.generate_next_token_id_from_context(
-      model, token_ids, rng, top_k, excluded_id,
+    let next_id = @minigpt.generate_next_token_id_from_context_with_sampling_options(
+      model,
+      token_ids,
+      rng,
+      top_k,
+      temperature,
+      None,
+      Some(sampleable_token_ids),
     )
     token_ids.push(next_id)
     let text = tokenizer.decode(token_ids) catch {
@@ -202,12 +219,15 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   let data_path = value(matches, "data")
   let max_chars = int_value(matches, "max-chars")
   let out_path = value(matches, "out")
+  let vocab_size = int_value(matches, "vocab-size")
   let config = training_config(matches)
   let rng = @random.Rand::new()
-  let (tokenizer, ids) = load_token_ids(data_path, max_chars)
+  let (tokenizer, ids) = load_token_ids(data_path, max_chars, vocab_size)
   println("command: train")
   println("data: \{data_path}")
   println("max chars: \{max_chars}")
+  println("tokenizer: \{tokenizer.kind_name()}")
+  println("target vocab size: \{vocab_size}")
   println("vocab size: \{tokenizer.vocab_size()}")
   println("tokens: \{ids.length()}")
   println("steps: \{config.steps}")
@@ -236,6 +256,7 @@ fn run_generate(matches : @argparse.Matches) -> Unit {
   let prompt = value(matches, "prompt")
   let max_new_tokens = int_value(matches, "max-new-tokens")
   let top_k = int_value(matches, "top-k")
+  let temperature = double_value(matches, "temperature")
   let rng = @random.Rand::new()
   if !@fs.path_exists(model_path) {
     abort(
@@ -253,14 +274,10 @@ fn run_generate(matches : @argparse.Matches) -> Unit {
   println("n_head: \{model.n_head()}")
   println("n_layer: \{model.n_layer()}")
   println("model kind: \{model.kind_name()}")
-  let newline_ids = tokenizer.encode("\n") catch { _ => [] }
-  let excluded_id = if newline_ids.length() > 0 {
-    Some(newline_ids[0])
-  } else {
-    None
-  }
+  println("top_k: \{top_k}")
+  println("temperature: \{temperature}")
   print_completion_trace(
-    model, tokenizer, prompt, max_new_tokens, top_k, excluded_id, rng,
+    model, tokenizer, prompt, max_new_tokens, top_k, temperature, rng,
   )
 }
 

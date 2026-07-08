@@ -1,11 +1,16 @@
 ///|
 test "checkpoint roundtrips tokenizer and model weights" {
   let rng = @random.Rand::new()
-  let tokenizer = CharTokenizer::from_text("ROMEO")
+  let (tokenizer, _) = BpeTokenizer::train("ROMEO ROMEO", 260)
   let model = MiniGPT::new_with_options(tokenizer.vocab_size(), 4, rng)
   let bytes = encode_checkpoint(model, tokenizer)
   let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
   @test.assert_eq(loaded_tokenizer.vocabulary(), tokenizer.vocabulary())
+  @test.assert_eq(loaded_tokenizer.merges(), tokenizer.merges())
+  @test.assert_eq(
+    loaded_tokenizer.sampleable_token_ids(),
+    tokenizer.sampleable_token_ids(),
+  )
   @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
   @test.assert_eq(loaded_model.n_embd(), model.n_embd())
   @test.assert_eq(loaded_model.n_head(), model.n_head())

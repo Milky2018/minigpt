@@ -3,9 +3,14 @@ import {
   "Milky2018/minigpt/optim",
   "Milky2018/minigpt/tensor",
   "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/int",
   "moonbitlang/core/math",
   "moonbitlang/core/random",
 }
+
+import {
+  "moonbitlang/core/test",
+} for "test"
 
 import {
   "moonbitlang/core/test",

@@ -1,50 +1,43 @@
 ///|
-test "char tokenizer roundtrips Shakespeare-style text" {
+test "BPE tokenizer roundtrips Shakespeare-style text" {
   let text = "To be\nor not to be\n"
-  let tokenizer = @minigpt.CharTokenizer::from_text(text)
-  let ids = tokenizer.encode(text)
-  assert_eq(tokenizer.decode(ids), text)
+  let (tokenizer, ids) = @minigpt.BpeTokenizer::train(text, 300)
+  @test.assert_eq(tokenizer.decode(ids), text)
+  @test.assert_eq(tokenizer.decode(tokenizer.encode(text)), text)
 }
 
 ///|
-test "char tokenizer keeps newline as a token" {
-  let tokenizer = @minigpt.CharTokenizer::from_text("A\nB")
-  assert_eq(tokenizer.vocab_size(), 3)
-  let ids = tokenizer.encode("\n")
-  assert_eq(ids.length(), 1)
-  assert_eq(tokenizer.decode(ids), "\n")
+test "BPE tokenizer starts from byte vocabulary" {
+  let tokenizer = @minigpt.BpeTokenizer::byte_level()
+  @test.assert_eq(tokenizer.vocab_size(), 256)
+  @test.assert_eq(tokenizer.encode("A\n"), [65, 10])
+  @test.assert_eq(tokenizer.decode([65, 10]), "A\n")
 }
 
 ///|
-test "char tokenizer assigns stable sorted ids" {
-  let tokenizer = @minigpt.CharTokenizer::from_text("baba")
-  let ids = tokenizer.encode("ab")
-  assert_eq(ids.length(), 2)
-  assert_eq(ids[0], 0)
-  assert_eq(ids[1], 1)
+test "BPE tokenizer learns deterministic merges" {
+  let (tokenizer, ids) = @minigpt.BpeTokenizer::train("abababab", 257)
+  @test.assert_eq(tokenizer.vocab_size(), 257)
+  @test.assert_eq(ids, [256, 256, 256, 256])
+  @test.assert_eq(tokenizer.encode("abab"), [256, 256])
+  @test.assert_eq(tokenizer.decode([256, 256]), "abab")
 }
 
 ///|
-test "char tokenizer rejects unknown characters" {
-  let tokenizer = @minigpt.CharTokenizer::from_text("ab")
+test "BPE tokenizer handles UTF-8 text" {
+  let text = "中文 text"
+  let (tokenizer, ids) = @minigpt.BpeTokenizer::train(text, 280)
+  @test.assert_eq(tokenizer.decode(ids), text)
+  @test.assert_eq(tokenizer.decode(tokenizer.encode(text)), text)
+}
+
+///|
+test "BPE tokenizer rejects invalid token ids" {
+  let tokenizer = @minigpt.BpeTokenizer::byte_level()
   try {
-    let _ = tokenizer.encode("ac")
+    let _ = tokenizer.decode([0, 256])
   } catch {
-    UnknownChar(ch) => assert_eq(ch, 'c')
-    _ => fail("expected UnknownChar")
-  } noraise {
-    _ => fail("expected encode to raise")
-  }
-}
-
-///|
-test "char tokenizer rejects invalid token ids" {
-  let tokenizer = @minigpt.CharTokenizer::from_text("ab")
-  try {
-    let _ = tokenizer.decode([0, 2])
-  } catch {
-    InvalidTokenId(id) => assert_eq(id, 2)
-    _ => fail("expected InvalidTokenId")
+    InvalidTokenId(id) => @test.assert_eq(id, 256)
   } noraise {
     _ => fail("expected decode to raise")
   }

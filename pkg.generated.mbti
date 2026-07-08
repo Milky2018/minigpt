@@ -12,6 +12,8 @@ pub const BATCH_SIZE : Int = 4
 
 pub const BLOCK_SIZE : Int = 8
 
+pub const BPE_VOCAB_SIZE : Int = 512
+
 pub const LEARNING_RATE : Double = 1.0e-3
 
 pub const MLP_MULTIPLIER : Int = 4
@@ -24,15 +26,21 @@ pub const N_LAYER : Int = 2
 
 pub const TRAINING_STEPS : Int = 10
 
-pub fn decode_checkpoint(Bytes) -> (MiniGPT, CharTokenizer)
+pub fn decode_checkpoint(Bytes) -> (MiniGPT, BpeTokenizer)
 
-pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> Bytes
+pub fn encode_checkpoint(MiniGPT, BpeTokenizer) -> Bytes
 
 pub fn generate_next_token_id_from_context(MiniGPT, Array[Int], @random.Rand, Int, Int?) -> Int
 
-pub fn generate_text(MiniGPT, CharTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
+pub fn generate_next_token_id_from_context_with_options(MiniGPT, Array[Int], @random.Rand, Int, Double, Int?) -> Int
+
+pub fn generate_next_token_id_from_context_with_sampling_options(MiniGPT, Array[Int], @random.Rand, Int, Double, Int?, Array[Int]?) -> Int
+
+pub fn generate_text(MiniGPT, BpeTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
 
 pub fn generate_token_ids(MiniGPT, Array[Int], Int, @random.Rand) -> Array[Int]
+
+pub fn generate_token_ids_with_sampling_options(MiniGPT, Array[Int], Int, @random.Rand, Array[Int]?) -> Array[Int]
 
 pub fn sample_batch(Array[Int], Int, Int, @random.Rand) -> (@tensor.TokenIds, @tensor.TokenIds)
 
@@ -40,21 +48,28 @@ pub fn train_token_ids(MiniGPT, Array[Int], TrainingConfig, @random.Rand) -> Tra
 
 // Errors
 pub(all) suberror TokenizerError {
-  UnknownChar(Char)
   InvalidTokenId(Int)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
-pub struct CharTokenizer {
-  char_to_id : Map[Char, Int]
-  id_to_char : Array[Char]
+pub(all) struct BpeMerge {
+  left : Int
+  right : Int
+} derive(Eq, @debug.Debug)
+
+pub struct BpeTokenizer {
+  // private fields
 }
-pub fn CharTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
-pub fn CharTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
-pub fn CharTokenizer::from_text(String) -> Self
-pub fn CharTokenizer::from_vocabulary(Array[String]) -> Self
-pub fn CharTokenizer::vocab_size(Self) -> Int
-pub fn CharTokenizer::vocabulary(Self) -> Array[String]
+pub fn BpeTokenizer::byte_level() -> Self
+pub fn BpeTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn BpeTokenizer::encode(Self, String) -> Array[Int]
+pub fn BpeTokenizer::from_parts(Array[Bytes], Array[BpeMerge], Array[Int]) -> Self
+pub fn BpeTokenizer::kind_name(Self) -> String
+pub fn BpeTokenizer::merges(Self) -> Array[BpeMerge]
+pub fn BpeTokenizer::sampleable_token_ids(Self) -> Array[Int]
+pub fn BpeTokenizer::train(String, Int) -> (Self, Array[Int])
+pub fn BpeTokenizer::vocab_size(Self) -> Int
+pub fn BpeTokenizer::vocabulary(Self) -> Array[Bytes]
 
 pub struct MiniGPT {
   ctx : @tensor.AutogradContext
