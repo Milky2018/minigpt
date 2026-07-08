@@ -36,6 +36,29 @@ pub struct AdamW {
 }
 
 ///|
+pub struct AdamWCheckpoint {
+  m : Array[Array[Double]]
+  v : Array[Array[Double]]
+  lr : Double
+  beta1 : Double
+  beta2 : Double
+  eps : Double
+  weight_decays : Array[Double]
+  step : Int
+  beta1_power : Double
+  beta2_power : Double
+}
+
+///|
+fn copy_double_arrays(values : Array[Array[Double]]) -> Array[Array[Double]] {
+  let copied : Array[Array[Double]] = []
+  for value in values {
+    copied.push(value.copy())
+  }
+  copied
+}
+
+///|
 pub fn AdamW::new(params : Array[@tensor.Tensor], lr : Double) -> AdamW {
   AdamW::new_with_options(params, lr, 0.9, 0.999, 1.0e-8, 0.0)
 }
@@ -182,4 +205,21 @@ fn AdamW::step_with_gradient_scale(self : AdamW, grad_scale : Double) -> Unit {
 ///|
 pub fn AdamW::step_count(self : AdamW) -> Int {
   self.state.val.step
+}
+
+///|
+pub fn AdamW::checkpoint(self : AdamW) -> AdamWCheckpoint {
+  let state = self.state.val
+  {
+    m: copy_double_arrays(state.m),
+    v: copy_double_arrays(state.v),
+    lr: state.lr,
+    beta1: state.beta1,
+    beta2: state.beta2,
+    eps: state.eps,
+    weight_decays: state.weight_decays.copy(),
+    step: state.step,
+    beta1_power: state.beta1_power,
+    beta2_power: state.beta2_power,
+  }
 }

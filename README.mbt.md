@@ -26,7 +26,7 @@ split = first 90% train, last 10% val
 
 ## 训练
 
-训练会从语料中构造字符级 tokenizer，然后生成一个二进制 checkpoint。默认输出文件是 `minigpt-model.bin`：
+训练会从语料中构造字符级 tokenizer，并按 nanoGPT 的 `always_save_checkpoint = False` 行为在 eval 时保存验证集 loss 创新低的 checkpoint。默认输出文件是 `minigpt-model.bin`：
 
 ```bash
 moon run --release cmd/main -- train
@@ -45,6 +45,8 @@ moon run --release cmd/main -- train --out minigpt-model.bin --steps 5000
 --out    checkpoint 输出路径，默认 minigpt-model.bin
 --steps  训练迭代数，默认 5000
 ```
+
+`--steps` 对应 nanoGPT 的 `max_iters`，循环结束条件是 `iter_num > max_iters`，因此 `--steps 1` 会执行 iter 0 和 iter 1 两次更新。iter 0 的 eval 不保存 checkpoint；只有 `iter_num > 0` 且 val loss 创新低时才会写入 `--out`。
 
 内置训练超参对齐 nanoGPT `config/train_shakespeare_char.py`：
 
@@ -75,7 +77,7 @@ grad_clip = 1.0
 moon run --release cmd/main -- generate --model minigpt-model.bin --prompt ROMEO:
 ```
 
-如果 `minigpt-model.bin` 不存在，先运行上面的 `train` 命令生成它。
+如果 `minigpt-model.bin` 不存在，先运行上面的 `train` 命令；训练步数太少时可能不会触发 nanoGPT 的保存条件。
 
 每生成一个字符，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
 
@@ -111,8 +113,8 @@ n_embd = 384
 n_head = 6
 n_layer = 6
 block size = 256
-parameters ~= 10.6M Doubles
-binary checkpoint ~= 80-90MB
+model parameters ~= 10.6M Doubles
+training checkpoint ~= 250MB
 ```
 
 ## 项目结构

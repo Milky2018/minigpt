@@ -482,7 +482,7 @@ fn causal_mask(time : Int) -> @tensor.Tensor {
   for row in 0..<time {
     for col in 0..<time {
       if col > row {
-        data[row * time + col] = -1.0e9
+        data[row * time + col] = @double.neg_infinity
       }
     }
   }
@@ -611,7 +611,7 @@ fn dropout(
 }
 
 ///|
-fn MiniGPT::forward_with_options(
+fn MiniGPT::hidden_states(
   self : MiniGPT,
   input_ids : @tensor.TokenIds,
   rng : @random.Rand?,
@@ -625,8 +625,18 @@ fn MiniGPT::forward_with_options(
   for layer in 0..<self.n_layer {
     hidden = self.block(hidden, layer, rng)
   }
-  hidden = hidden.layer_norm(self.ln_f_weight, self.ln_f_bias, LAYER_NORM_EPS)
-  hidden.matmul(self.token_embedding_table.transpose2d())
+  hidden.layer_norm(self.ln_f_weight, self.ln_f_bias, LAYER_NORM_EPS)
+}
+
+///|
+fn MiniGPT::forward_with_options(
+  self : MiniGPT,
+  input_ids : @tensor.TokenIds,
+  rng : @random.Rand?,
+) -> @tensor.Tensor {
+  self
+  .hidden_states(input_ids, rng)
+  .matmul(self.token_embedding_table.transpose2d())
 }
 
 ///|
@@ -644,6 +654,28 @@ pub fn MiniGPT::forward_train(
   rng : @random.Rand,
 ) -> @tensor.Tensor {
   self.forward_with_options(input_ids, Some(rng))
+}
+
+///|
+pub fn MiniGPT::last_logits(
+  self : MiniGPT,
+  input_ids : @tensor.TokenIds,
+) -> @tensor.Tensor {
+  let hidden = self.hidden_states(input_ids, None)
+  let hidden_data = hidden.data()
+  let last_offset = hidden_data.length() - self.n_embd
+  let embedding = self.token_embedding_table.data()
+  let logits = Array::make(self.vocab_size, 0.0)
+  for token in 0..<self.vocab_size {
+    let mut value = 0.0
+    for dim in 0..<self.n_embd {
+      value += hidden_data[last_offset + dim] *
+        embedding[token * self.n_embd + dim]
+    }
+    logits[token] = value
+  }
+  self.clear_graph()
+  @tensor.Tensor::from_array(logits, [self.vocab_size])
 }
 
 ///|

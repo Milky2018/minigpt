@@ -115,6 +115,8 @@ fn load_dataset(path : String) -> @minigpt.ShakespeareCharDataset {
 fn print_loss_summary(stats : @minigpt.TrainingStats) -> Unit {
   println("initial eval loss: \{stats.initial_eval_loss}")
   println("final eval loss: \{stats.final_eval_loss}")
+  println("best val loss: \{stats.best_val_loss}")
+  println("saved checkpoints: \{stats.saved_checkpoints}")
   if stats.losses.length() == 0 {
     println("losses: []")
   } else {
@@ -186,17 +188,32 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("n_embd: \{model.n_embd()}")
   println("n_head: \{model.n_head()}")
   println("n_layer: \{model.n_layer()}")
-  let stats = @minigpt.train_token_ids(
+  let saved_checkpoints : Ref[Int] = { val: 0 }
+  let stats = @minigpt.train_token_ids_with_checkpoint_callback(
     model,
     dataset.train_ids,
     dataset.val_ids,
     config,
     rng,
+    fn(model, optimizer, iter_num, best_val_loss, config) {
+      let checkpoint = @minigpt.encode_training_checkpoint(
+        model,
+        dataset.tokenizer,
+        optimizer,
+        iter_num,
+        best_val_loss,
+        config,
+      )
+      @fs.write_bytes_to_file(out_path, checkpoint) catch {
+        _ => abort("failed to write checkpoint '\{out_path}'")
+      }
+      saved_checkpoints.val += 1
+      println("saving checkpoint to \{out_path}")
+    },
   )
   print_loss_summary(stats)
-  let checkpoint = @minigpt.encode_checkpoint(model, dataset.tokenizer)
-  @fs.write_bytes_to_file(out_path, checkpoint) catch {
-    _ => abort("failed to write checkpoint '\{out_path}'")
+  if saved_checkpoints.val == 0 {
+    println("no checkpoint saved; val loss did not improve after iter 0")
   }
 }
 

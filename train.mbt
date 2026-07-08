@@ -158,6 +158,8 @@ pub struct TrainingStats {
   losses : Array[Double]
   initial_eval_loss : Double
   final_eval_loss : Double
+  best_val_loss : Double
+  saved_checkpoints : Int
 }
 
 ///|
@@ -221,8 +223,26 @@ pub fn train_token_ids(
   config : TrainingConfig,
   rng : @random.Rand,
 ) -> TrainingStats {
+  train_token_ids_with_checkpoint_callback(
+    model,
+    train_ids,
+    val_ids,
+    config,
+    rng,
+    fn(_model, _optimizer, _iter_num, _best_val_loss, _config) { () },
+  )
+}
+
+///|
+pub fn train_token_ids_with_checkpoint_callback(
+  model : MiniGPT,
+  train_ids : Array[Int],
+  val_ids : Array[Int],
+  config : TrainingConfig,
+  rng : @random.Rand,
+  on_checkpoint : (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit,
+) -> TrainingStats {
   let losses : Array[Double] = []
-  let initial_eval_loss = eval_token_ids(model, val_ids, config, rng)
   let params = model.parameters()
   let optimizer = @optim.AdamW::new_with_parameter_weight_decays(
     params,
@@ -232,13 +252,31 @@ pub fn train_token_ids(
     1.0e-8,
     model.parameter_weight_decays(config.weight_decay),
   )
-  for step in 0..<config.steps {
-    let lr = config.learning_rate_at(step)
+  let mut iter_num = 0
+  let mut best_val_loss = 1.0e9
+  let mut saved_checkpoints = 0
+  let mut initial_eval_loss = @double.not_a_number
+  let mut final_eval_loss = @double.not_a_number
+  while true {
+    let lr = config.learning_rate_at(iter_num)
     optimizer.set_learning_rate(lr)
-    if step % config.eval_interval == 0 {
+    if iter_num % config.eval_interval == 0 {
       let train_loss = eval_token_ids(model, train_ids, config, rng)
       let val_loss = eval_token_ids(model, val_ids, config, rng)
-      println("step \{step}: train loss \{train_loss}, val loss \{val_loss}")
+      println(
+        "step \{iter_num}: train loss \{train_loss}, val loss \{val_loss}",
+      )
+      if initial_eval_loss != initial_eval_loss {
+        initial_eval_loss = val_loss
+      }
+      final_eval_loss = val_loss
+      if val_loss < best_val_loss {
+        best_val_loss = val_loss
+        if iter_num > 0 {
+          on_checkpoint(model, optimizer, iter_num, best_val_loss, config)
+          saved_checkpoints += 1
+        }
+      }
     }
     let (inputs, targets) = sample_batch(
       train_ids,
@@ -252,10 +290,19 @@ pub fn train_token_ids(
     loss.backward()
     optimizer.step_with_grad_clip(config.grad_clip)
     model.clear_graph()
-    if step % config.log_interval == 0 {
-      println("iter \{step}: loss \{loss_value}, lr \{lr}")
+    if iter_num % config.log_interval == 0 {
+      println("iter \{iter_num}: loss \{loss_value}, lr \{lr}")
+    }
+    iter_num += 1
+    if iter_num > config.steps {
+      break
     }
   }
-  let final_eval_loss = eval_token_ids(model, val_ids, config, rng)
-  { losses, initial_eval_loss, final_eval_loss }
+  {
+    losses,
+    initial_eval_loss,
+    final_eval_loss,
+    best_val_loss,
+    saved_checkpoints,
+  }
 }

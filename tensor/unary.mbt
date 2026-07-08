@@ -23,10 +23,40 @@ pub fn Tensor::relu(self : Tensor) -> Tensor {
 }
 
 ///|
+const INV_SQRT_2 : Double = 0.7071067811865475
+
+///|
+const INV_SQRT_2PI : Double = 0.3989422804014327
+
+///|
+fn erf_approx(x : Double) -> Double {
+  let sign = if x < 0.0 { -1.0 } else { 1.0 }
+  let ax = x.abs()
+  let t = 1.0 / (1.0 + 0.3275911 * ax)
+  let y = 1.0 -
+    (
+      (((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) *
+      t +
+      0.254829592
+    ) *
+    t *
+    @math.exp(-ax * ax)
+  sign * y
+}
+
+///|
+fn normal_cdf(x : Double) -> Double {
+  0.5 * (1.0 + erf_approx(x * INV_SQRT_2))
+}
+
+///|
+fn normal_pdf(x : Double) -> Double {
+  INV_SQRT_2PI * @math.exp(-0.5 * x * x)
+}
+
+///|
 fn gelu_value(x : Double) -> Double {
-  let k = 0.7978845608028654
-  let c = 0.044715
-  0.5 * x * (1.0 + @math.tanh(k * (x + c * x * x * x)))
+  x * normal_cdf(x)
 }
 
 ///|

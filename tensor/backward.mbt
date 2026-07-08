@@ -132,15 +132,10 @@ fn backward_node(ctx : AutogradContext, id : Int, grad : Array[Double]) -> Unit 
     Gelu(parent, input_data, input_shape) =>
       match parent {
         Some(id) => {
-          let k = 0.7978845608028654
-          let c = 0.044715
           let g = Array::make(grad.length(), 0.0)
           for i in 0..<g.length() {
             let x = input_data[i]
-            let u = k * (x + c * x * x * x)
-            let t = @math.tanh(u)
-            let du = k * (1.0 + 3.0 * c * x * x)
-            let derivative = 0.5 * (1.0 + t) + 0.5 * x * (1.0 - t * t) * du
+            let derivative = normal_cdf(x) + x * normal_pdf(x)
             g[i] = grad[i] * derivative
           }
           ctx.add_grad(id, reduce_to_shape(g, node.shape, input_shape))

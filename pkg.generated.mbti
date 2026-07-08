@@ -2,6 +2,7 @@
 package "Milky2018/minigpt"
 
 import {
+  "Milky2018/minigpt/optim",
   "Milky2018/minigpt/tensor",
   "moonbitlang/core/debug",
   "moonbitlang/core/random",
@@ -48,6 +49,8 @@ pub fn decode_checkpoint(Bytes) -> (MiniGPT, CharTokenizer)
 
 pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> Bytes
 
+pub fn encode_training_checkpoint(MiniGPT, CharTokenizer, @optim.AdamW, Int, Double, TrainingConfig) -> Bytes
+
 pub fn generate_next_token_id_from_context(MiniGPT, Array[Int], @random.Rand, Int, Int?) -> Int
 
 pub fn generate_next_token_id_from_context_with_options(MiniGPT, Array[Int], @random.Rand, Int, Double, Int?) -> Int
@@ -65,6 +68,8 @@ pub fn prepare_shakespeare_char_dataset(String) -> ShakespeareCharDataset
 pub fn sample_batch(Array[Int], Int, Int, @random.Rand) -> (@tensor.TokenIds, @tensor.TokenIds)
 
 pub fn train_token_ids(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand) -> TrainingStats
+
+pub fn train_token_ids_with_checkpoint_callback(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand, (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit) -> TrainingStats
 
 // Errors
 pub(all) suberror TokenizerError {
@@ -117,6 +122,7 @@ pub fn MiniGPT::clear_graph(Self) -> Unit
 pub fn MiniGPT::forward(Self, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::forward_train(Self, @tensor.TokenIds, @random.Rand) -> @tensor.Tensor
 pub fn MiniGPT::kind_name(Self) -> String
+pub fn MiniGPT::last_logits(Self, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::loss(Self, @tensor.TokenIds, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::loss_train(Self, @tensor.TokenIds, @tensor.TokenIds, @random.Rand) -> @tensor.Tensor
 pub fn MiniGPT::n_embd(Self) -> Int
@@ -161,6 +167,8 @@ pub struct TrainingStats {
   losses : Array[Double]
   initial_eval_loss : Double
   final_eval_loss : Double
+  best_val_loss : Double
+  saved_checkpoints : Int
 }
 
 // Type aliases

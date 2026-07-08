@@ -45,3 +45,30 @@ test "checkpoint roundtrips tokenizer and model weights" {
   @test.assert_eq(loaded.ln_f_weight, original.ln_f_weight)
   @test.assert_eq(loaded.ln_f_bias, original.ln_f_bias)
 }
+
+///|
+test "training checkpoint decodes model and tokenizer" {
+  let rng = @random.Rand::new()
+  let (tokenizer, _) = CharTokenizer::train("ROMEO ROMEO")
+  let model = MiniGPT::new_gpt_with_options(
+    tokenizer.vocab_size(),
+    6,
+    3,
+    1,
+    4,
+    rng,
+  )
+  let optimizer = @optim.AdamW::new(model.parameters(), 0.001)
+  let bytes = encode_training_checkpoint(
+    model,
+    tokenizer,
+    optimizer,
+    250,
+    1.23,
+    TrainingConfig::new(1, 2, 3, 0.001, eval_iters=1),
+  )
+  let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
+  @test.assert_eq(loaded_tokenizer.vocabulary(), tokenizer.vocabulary())
+  @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
+  @test.assert_eq(loaded_model.block_size(), model.block_size())
+}

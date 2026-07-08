@@ -124,13 +124,8 @@ pub fn generate_next_token_id_from_context_with_sampling_options(
     0
   }
   let context = context_ids[start:].to_owned()
-  let logits = model.forward(@tensor.TokenIds::new(context, [context.length()]))
-  let data = logits.data()
-  let vocab_size = model.vocab_size()
-  let offset = data.length() - vocab_size
-  let last_logits = @tensor.Tensor::from_array(
-    data[offset:data.length()].to_owned(),
-    [vocab_size],
+  let last_logits = model.last_logits(
+    @tensor.TokenIds::new(context, [context.length()]),
   )
   sample_from_logits_with_options(
     last_logits, rng, top_k, temperature, excluded_id, allowed_ids,

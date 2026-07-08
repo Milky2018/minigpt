@@ -1,5 +1,5 @@
 ///|
-const CHECKPOINT_VERSION : Int = 6
+const CHECKPOINT_VERSION : Int = 7
 
 ///|
 const CHECKPOINT_MAGIC : Int = 1296649799
@@ -15,6 +15,10 @@ priv struct MiniGPTCheckpoint {
   n_layer : Int
   block_size : Int
   parameters : MiniGPTParameterData
+  training_config : TrainingConfig?
+  optimizer : @optim.AdamWCheckpoint?
+  iter_num : Int
+  best_val_loss : Double
 }
 
 ///|
@@ -32,6 +36,10 @@ fn MiniGPTCheckpoint::from_model(
     n_layer: model.n_layer(),
     block_size: model.block_size(),
     parameters: model.parameter_data(),
+    training_config: None,
+    optimizer: None,
+    iter_num: 0,
+    best_val_loss: 1.0e9,
   }
 }
 
@@ -63,12 +71,36 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
 ///|
 pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
   let checkpoint = MiniGPTCheckpoint::from_model(model, tokenizer)
+  encode_checkpoint_data(checkpoint)
+}
+
+///|
+pub fn encode_training_checkpoint(
+  model : MiniGPT,
+  tokenizer : CharTokenizer,
+  optimizer : @optim.AdamW,
+  iter_num : Int,
+  best_val_loss : Double,
+  config : TrainingConfig,
+) -> Bytes {
+  let checkpoint = MiniGPTCheckpoint::from_model(model, tokenizer)
+  encode_checkpoint_data({
+    ..checkpoint,
+    training_config: Some(config),
+    optimizer: Some(optimizer.checkpoint()),
+    iter_num,
+    best_val_loss,
+  })
+}
+
+///|
+fn encode_checkpoint_data(checkpoint : MiniGPTCheckpoint) -> Bytes {
   let params = checkpoint.parameters
   let buffer = Buffer::Buffer()
   buffer.write_int_le(CHECKPOINT_MAGIC)
   buffer.write_int_le(CHECKPOINT_VERSION)
-  write_string(buffer, model.kind_name())
-  write_string(buffer, tokenizer.kind_name())
+  write_string(buffer, checkpoint.model_kind.unwrap())
+  write_string(buffer, checkpoint.tokenizer_kind.unwrap())
   buffer.write_int_le(checkpoint.vocabulary.length())
   for ch in checkpoint.vocabulary {
     write_string(buffer, ch.to_string())
@@ -97,6 +129,17 @@ pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
   write_double_arrays(buffer, params.b_proj)
   write_doubles(buffer, params.ln_f_weight)
   write_doubles(buffer, params.ln_f_bias)
+  buffer.write_int_le(checkpoint.iter_num)
+  buffer.write_double_le(checkpoint.best_val_loss)
+  match (checkpoint.training_config, checkpoint.optimizer) {
+    (Some(config), Some(optimizer)) => {
+      buffer.write_int_le(1)
+      write_training_config(buffer, config)
+      write_adamw_checkpoint(buffer, optimizer)
+    }
+    (None, None) => buffer.write_int_le(0)
+    _ => abort("training checkpoint requires both config and optimizer")
+  }
   buffer.to_bytes()
 }
 
@@ -144,6 +187,18 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     ln_f_weight: reader.read_doubles(),
     ln_f_bias: reader.read_doubles(),
   }
+  let iter_num = reader.read_int_le()
+  let best_val_loss = reader.read_double_le()
+  let has_training = reader.read_int_le()
+  let training_config : TrainingConfig? = if has_training == 0 {
+    None
+  } else if has_training == 1 {
+    let config = reader.read_training_config()
+    reader.skip_adamw_checkpoint()
+    Some(config)
+  } else {
+    abort("invalid checkpoint training metadata flag")
+  }
   if !reader.is_done() {
     abort("checkpoint contains trailing bytes")
   }
@@ -157,8 +212,46 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     n_layer,
     block_size,
     parameters,
+    training_config,
+    optimizer: None,
+    iter_num,
+    best_val_loss,
   }
   checkpoint.to_model_and_tokenizer()
+}
+
+///|
+fn write_training_config(buffer : Buffer, config : TrainingConfig) -> Unit {
+  buffer.write_int_le(config.batch_size)
+  buffer.write_int_le(config.block_size)
+  buffer.write_int_le(config.steps)
+  buffer.write_double_le(config.learning_rate)
+  buffer.write_double_le(config.min_lr)
+  buffer.write_int_le(config.warmup_iters)
+  buffer.write_int_le(config.eval_interval)
+  buffer.write_int_le(config.eval_iters)
+  buffer.write_int_le(config.log_interval)
+  buffer.write_double_le(config.weight_decay)
+  buffer.write_double_le(config.beta1)
+  buffer.write_double_le(config.beta2)
+  buffer.write_double_le(config.grad_clip)
+}
+
+///|
+fn write_adamw_checkpoint(
+  buffer : Buffer,
+  optimizer : @optim.AdamWCheckpoint,
+) -> Unit {
+  write_double_arrays(buffer, optimizer.m)
+  write_double_arrays(buffer, optimizer.v)
+  buffer.write_double_le(optimizer.lr)
+  buffer.write_double_le(optimizer.beta1)
+  buffer.write_double_le(optimizer.beta2)
+  buffer.write_double_le(optimizer.eps)
+  write_doubles(buffer, optimizer.weight_decays)
+  buffer.write_int_le(optimizer.step)
+  buffer.write_double_le(optimizer.beta1_power)
+  buffer.write_double_le(optimizer.beta2_power)
 }
 
 ///|
@@ -300,4 +393,37 @@ fn BytesReader::read_double_arrays(self : BytesReader) -> Array[Array[Double]] {
     values.push(self.read_doubles())
   }
   values
+}
+
+///|
+fn BytesReader::read_training_config(self : BytesReader) -> TrainingConfig {
+  TrainingConfig::new(
+    self.read_int_le(),
+    self.read_int_le(),
+    self.read_int_le(),
+    self.read_double_le(),
+    min_lr=self.read_double_le(),
+    warmup_iters=self.read_int_le(),
+    eval_interval=self.read_int_le(),
+    eval_iters=self.read_int_le(),
+    log_interval=self.read_int_le(),
+    weight_decay=self.read_double_le(),
+    beta1=self.read_double_le(),
+    beta2=self.read_double_le(),
+    grad_clip=self.read_double_le(),
+  )
+}
+
+///|
+fn BytesReader::skip_adamw_checkpoint(self : BytesReader) -> Unit {
+  ignore(self.read_double_arrays())
+  ignore(self.read_double_arrays())
+  ignore(self.read_double_le())
+  ignore(self.read_double_le())
+  ignore(self.read_double_le())
+  ignore(self.read_double_le())
+  ignore(self.read_doubles())
+  ignore(self.read_int_le())
+  ignore(self.read_double_le())
+  ignore(self.read_double_le())
 }
