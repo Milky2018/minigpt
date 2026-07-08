@@ -1,0 +1,7 @@
+// import {
+//   "Milky2018/minigpt" @lib,
+// }
+
+options(
+  "is-main": true,
+)
