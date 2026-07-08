@@ -173,10 +173,9 @@ dimension, token embedding weights, and output projection weights.
 _Avoid_: Saving weights without tokenizer vocabulary
 
 **Completion Trace**:
-The CLI output that prints the prompt once and then prints each generated token
-as it is produced, so the teaching demo makes autocomplete visible without
-repeating the full accumulated text at every step.
-_Avoid_: Growing-text step log
+The CLI output that prints the full accumulated completion after each generated
+token, making the autocomplete process visible without separate step labels.
+_Avoid_: Final-only generation output
 
 **CLI Corpus Window**:
 The character prefix of the corpus used by CLI demos to keep the bigram model

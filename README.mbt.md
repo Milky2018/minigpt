@@ -53,16 +53,16 @@ moon run --target native cmd/main -- train --steps 10 --out minigpt-model.json
 moon run --target native cmd/main -- generate --model minigpt-model.json --prompt 春
 ```
 
-输出会先打印 prompt，然后每生成一个字就打印一个字：
+每生成一个字，都会打印当前已经补全出的完整内容：
 
 ```text
 completion:
 春
-神
-五
-失
-九
-所
+春神
+春神五
+春神五失
+春神五失九
+春神五失九所
 ```
 
 生成参数：

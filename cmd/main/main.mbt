@@ -180,12 +180,11 @@ fn print_completion_trace(
   println(prompt)
   for _ in 0..<max_new_tokens {
     let next = @minigpt.generate_token_ids(model, token_ids, 1, rng)
-    let next_id = next[next.length() - 1]
-    let token = tokenizer.decode([next_id]) catch {
-      _ => abort("failed to decode generated token")
-    }
-    println(token)
     token_ids = next
+    let text = tokenizer.decode(token_ids) catch {
+      _ => abort("failed to decode generated text")
+    }
+    println(text)
   }
 }
 
