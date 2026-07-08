@@ -4,7 +4,6 @@ package "Milky2018/minigpt"
 import {
   "Milky2018/minigpt/tensor",
   "moonbitlang/core/debug",
-  "moonbitlang/core/json",
   "moonbitlang/core/random",
 }
 
@@ -19,11 +18,9 @@ pub const N_EMBD : Int = 128
 
 pub const TRAINING_STEPS : Int = 0
 
-pub fn decode_checkpoint(String) -> (MiniGPT, CharTokenizer) raise
+pub fn decode_checkpoint(Bytes) -> (MiniGPT, CharTokenizer)
 
-pub fn decode_checkpoint_data(String) -> MiniGPTCheckpoint raise
-
-pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> String
+pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> Bytes
 
 pub fn generate_next_token_id(MiniGPT, Int, @random.Rand, Int, Int?) -> Int
 
@@ -76,17 +73,6 @@ pub fn MiniGPT::new_with_options(Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::parameters(Self) -> Array[@tensor.Tensor]
 pub fn MiniGPT::token_embedding_data(Self) -> Array[Double]
 pub fn MiniGPT::vocab_size(Self) -> Int
-
-pub struct MiniGPTCheckpoint {
-  version : Int
-  model_kind : String?
-  vocabulary : Array[String]
-  n_embd : Int
-  token_embedding_table : Array[Double]
-  lm_head : Array[Double]
-} derive(ToJson, @json.FromJson)
-pub fn MiniGPTCheckpoint::from_model(MiniGPT, CharTokenizer) -> Self
-pub fn MiniGPTCheckpoint::to_model_and_tokenizer(Self) -> (MiniGPT, CharTokenizer)
 
 pub struct TrainingConfig {
   batch_size : Int

@@ -12,15 +12,15 @@
 data/poems_2m.txt
 ```
 
-CLI 默认只使用语料前 5000 个字符，避免训练和 checkpoint 文件过大。需要使用完整语料时可以传：
+CLI 默认使用完整语料。需要更快的 smoke test 或更小的 checkpoint 时，可以限制语料窗口：
 
 ```bash
---max-chars 0
+--max-chars 5000
 ```
 
 ## 训练
 
-训练会生成一个 checkpoint。默认输出文件是 `minigpt-model.json`：
+训练会生成一个二进制 checkpoint。默认输出文件是 `minigpt-model.bin`：
 
 ```bash
 moon run --release cmd/main -- train
@@ -29,15 +29,15 @@ moon run --release cmd/main -- train
 指定输出文件：
 
 ```bash
-moon run --release cmd/main -- train --out minigpt-model.json
+moon run --release cmd/main -- train --out minigpt-model.bin
 ```
 
 训练参数：
 
 ```text
 --data            UTF-8 语料路径，默认 data/poems_2m.txt
---max-chars       使用多少个语料字符，0 表示完整语料，默认 5000
---out             checkpoint 输出路径，默认 minigpt-model.json
+--max-chars       使用多少个语料字符，0 表示完整语料，默认 0
+--out             checkpoint 输出路径，默认 minigpt-model.bin
 --steps           额外梯度微调步数，默认 0
 --batch-size      batch size，默认 4
 --block-size      上下文长度，默认 4
@@ -49,12 +49,12 @@ moon run --release cmd/main -- train --out minigpt-model.json
 生成只加载已经训练好的 checkpoint，不会重新训练：
 
 ```bash
-moon run --release cmd/main -- generate --model minigpt-model.json --prompt 春
+moon run --release cmd/main -- generate --model minigpt-model.bin --prompt 春
 ```
 
-如果 `minigpt-model.json` 不存在，先运行上面的 `train` 命令生成它。
+如果 `minigpt-model.bin` 不存在，先运行上面的 `train` 命令生成它。
 
-每生成一个字，都会打印当前已经补全出的完整内容；生成到句末标点会停止：
+每生成一个字，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
 
 ```text
 completion:
@@ -62,12 +62,14 @@ completion:
 花鳥
 花鳥聲
 花鳥聲。
+花鳥聲。玉
+花鳥聲。玉，
 ```
 
 生成参数：
 
 ```text
---model           checkpoint 路径，默认 minigpt-model.json
+--model           checkpoint 路径，默认 minigpt-model.bin
 --prompt          补全起始文本，默认 春
 --max-new-tokens  生成字符数，默认 80
 --top-k           从模型 logits 最高的几个候选中采样，默认 5
@@ -75,25 +77,25 @@ completion:
 
 ## Checkpoint 大小
 
-当前 checkpoint 使用 JSON，方便检查，但比二进制格式大。默认 full-rank bigram 会保存一个 `[vocab_size, vocab_size]` logits 矩阵。
+当前 checkpoint 使用紧凑二进制格式。默认 full-rank bigram 会保存一个 `[vocab_size, vocab_size]` logits 矩阵。
 
-默认演示配置大致为：
+默认完整语料配置大致为：
 
 ```text
-max chars = 5000
-vocab size ~= 1309
+max chars = 0
+vocab size ~= 5934
 model kind = full-rank-bigram
-parameters = vocab_size * vocab_size ~= 1,713,481 Doubles
-JSON checkpoint ~= 41MB
+parameters = vocab_size * vocab_size ~= 35,212,356 Doubles
+binary checkpoint ~= 269MB
 ```
 
-如果希望 checkpoint 小一点，可以降低 `--max-chars`：
+如果希望 checkpoint 小一点，可以限制 `--max-chars`：
 
 ```bash
 moon run --release cmd/main -- train --max-chars 2000
 ```
 
-注意：如果训练语料窗口太小，默认 prompt `春` 可能不在 tokenizer 词表里，生成时需要换成词表中出现过的字符，或者增大 `--max-chars`。
+注意：如果训练语料窗口太小，prompt 里的字可能不在 tokenizer 词表里，生成时需要换成词表中出现过的字符，或者增大 `--max-chars`。
 
 ## 项目结构
 
@@ -116,6 +118,6 @@ data/               古诗语料
 ```bash
 moon check --warn-list +73
 moon test
-moon run --release cmd/main -- train --out /tmp/minigpt-smoke.json
-moon run --release cmd/main -- generate --model /tmp/minigpt-smoke.json --prompt 上 --max-new-tokens 5
+moon run --release cmd/main -- train --out /tmp/minigpt-smoke.bin
+moon run --release cmd/main -- generate --model /tmp/minigpt-smoke.bin --prompt 上 --max-new-tokens 5
 ```

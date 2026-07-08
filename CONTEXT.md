@@ -174,16 +174,17 @@ and model weights, and samples continuation text from a prompt.
 _Avoid_: Re-training inside generation
 
 **Model Checkpoint**:
-A JSON file containing checkpoint version, character vocabulary, embedding
-dimension, model kind, token embedding weights, and output projection weights.
+A compact binary file containing checkpoint version, model kind, character
+vocabulary, embedding dimension, token embedding weights, and output projection
+weights.
 _Avoid_: Saving weights without tokenizer vocabulary
 
 **Completion Trace**:
 The CLI output that prints the full accumulated completion after each generated
-token until a sentence-ending punctuation mark or the token limit.
+token until the `--max-new-tokens` limit.
 _Avoid_: Final-only generation output
 
 **CLI Corpus Window**:
-The character prefix of the corpus used by CLI demos to keep the bigram model
-small enough for the default MoonBit runtime; `0` means use the full corpus.
-_Avoid_: Defaulting the CLI to full-corpus bigram training
+The optional character prefix limit used by CLI demos to shrink the bigram
+checkpoint for smoke tests; `0` means use the full corpus and is the default.
+_Avoid_: Assuming the default model only saw a tiny corpus prefix

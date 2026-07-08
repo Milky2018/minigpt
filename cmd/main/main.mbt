@@ -11,10 +11,10 @@ const DEFAULT_MAX_NEW_TOKENS : Int = 80
 const DEFAULT_BIGRAM_TOP_K : Int = 5
 
 ///|
-const DEFAULT_MODEL_PATH : String = "minigpt-model.json"
+const DEFAULT_MODEL_PATH : String = "minigpt-model.bin"
 
 ///|
-const DEFAULT_MAX_CHARS : Int = 5000
+const DEFAULT_MAX_CHARS : Int = 0
 
 ///|
 fn cli_command() -> @argparse.Command {
@@ -169,18 +169,6 @@ fn print_loss_summary(losses : Array[Double]) -> Unit {
 }
 
 ///|
-fn is_sentence_end(ch : Char) -> Bool {
-  ch == '。' ||
-  ch == '！' ||
-  ch == '？' ||
-  ch == '；' ||
-  ch == '.' ||
-  ch == '!' ||
-  ch == '?' ||
-  ch == ';'
-}
-
-///|
 fn print_completion_trace(
   model : @minigpt.MiniGPT,
   tokenizer : @minigpt.CharTokenizer,
@@ -205,12 +193,6 @@ fn print_completion_trace(
       _ => abort("failed to decode generated text")
     }
     println(text)
-    let token = tokenizer.decode([next_id]) catch {
-      _ => abort("failed to decode generated token")
-    }
-    if is_sentence_end(token.iter().next().unwrap()) {
-      break
-    }
   }
 }
 
@@ -239,7 +221,7 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   let stats = @minigpt.train_token_ids(model, ids, config, rng)
   print_loss_summary(stats.losses)
   let checkpoint = @minigpt.encode_checkpoint(model, tokenizer)
-  @fs.write_string_to_file(out_path, checkpoint, encoding="utf8") catch {
+  @fs.write_bytes_to_file(out_path, checkpoint) catch {
     _ => abort("failed to write checkpoint '\{out_path}'")
   }
 }
@@ -256,12 +238,10 @@ fn run_generate(matches : @argparse.Matches) -> Unit {
       "checkpoint '\{model_path}' not found; run `moon run --release cmd/main -- train --out \{model_path}` first",
     )
   }
-  let checkpoint = @fs.read_file_to_string(model_path, encoding="utf8") catch {
+  let checkpoint = @fs.read_file_to_bytes(model_path) catch {
     _ => abort("failed to read checkpoint '\{model_path}'")
   }
-  let (model, tokenizer) = @minigpt.decode_checkpoint(checkpoint) catch {
-    _ => abort("failed to decode checkpoint '\{model_path}'")
-  }
+  let (model, tokenizer) = @minigpt.decode_checkpoint(checkpoint)
   println("command: generate")
   println("model: \{model_path}")
   println("vocab size: \{tokenizer.vocab_size()}")

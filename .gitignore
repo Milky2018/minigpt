@@ -4,5 +4,5 @@ target/
 target
 .mooncakes/
 .moonagent/
-minigpt-model.json
+minigpt-model.bin
 minigpt
