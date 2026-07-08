@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/minigpt/nn"
+
+import {
+  "Milky2018/minigpt/tensor",
+}
+
+// Values
+pub fn cross_entropy(@tensor.Tensor, @tensor.TokenIds) -> @tensor.Tensor
+
+pub fn embedding(@tensor.Tensor, @tensor.TokenIds) -> @tensor.Tensor
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

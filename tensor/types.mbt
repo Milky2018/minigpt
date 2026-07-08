@@ -27,6 +27,14 @@ priv enum NodeKind {
   Neg(Int?, Array[Int])
   Sum(Int?, Array[Int])
   Reshape(Int?, Array[Int])
+  Exp(Int?, Array[Double], Array[Int])
+  Log(Int?, Array[Double], Array[Int])
+  Relu(Int?, Array[Double], Array[Int])
+  SwapAxes(Int?, Array[Int], Int, Int)
+  Matmul(Int?, Array[Double], Array[Int], Int?, Array[Double], Array[Int])
+  Softmax(Int?, Array[Double], Int)
+  GatherRows(Int?, Array[Int], Array[Int])
+  CrossEntropy(Int?, Array[Double], Array[Int], Array[Int])
 }
 
 ///|

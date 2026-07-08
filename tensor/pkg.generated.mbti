@@ -1,7 +1,12 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "Milky2018/minigpt/tensor"
 
+import {
+  "moonbitlang/core/random",
+}
+
 // Values
+pub fn check_grad(Array[Double], Array[Int], (Tensor) -> Tensor, eps? : Double, tol? : Double) -> Bool
 
 // Errors
 
@@ -18,22 +23,33 @@ pub struct Tensor {
 }
 pub fn Tensor::add(Self, Self) -> Self
 pub fn Tensor::backward(Self) -> Unit
+pub fn Tensor::cross_entropy(Self, TokenIds) -> Self
 pub fn Tensor::data(Self) -> Array[Double]
 pub fn Tensor::div(Self, Self) -> Self
+pub fn Tensor::exp(Self) -> Self
 pub fn Tensor::from_array(Array[Double], Array[Int]) -> Self
+pub fn Tensor::gather_rows(Self, TokenIds) -> Self
 pub fn Tensor::grad(Self) -> Self?
+pub fn Tensor::log(Self) -> Self
+pub fn Tensor::matmul(Self, Self) -> Self
 pub fn Tensor::mean(Self) -> Self
 pub fn Tensor::mul(Self, Self) -> Self
 pub fn Tensor::neg(Self) -> Self
 pub fn Tensor::numel(Self) -> Int
 pub fn Tensor::ones(Array[Int]) -> Self
 pub fn Tensor::parameter(AutogradContext, Array[Double], Array[Int]) -> Self
+pub fn Tensor::randn(AutogradContext, Array[Int], @random.Rand) -> Self
+pub fn Tensor::relu(Self) -> Self
 pub fn Tensor::requires_grad(Self) -> Bool
 pub fn Tensor::reshape(Self, Array[Int]) -> Self
 pub fn Tensor::scalar(Double) -> Self
+pub fn Tensor::set_data_in_place(Self, Array[Double]) -> Unit
 pub fn Tensor::shape(Self) -> Array[Int]
+pub fn Tensor::softmax(Self, Int) -> Self
 pub fn Tensor::sub(Self, Self) -> Self
 pub fn Tensor::sum(Self) -> Self
+pub fn Tensor::swap_axes(Self, Int, Int) -> Self
+pub fn Tensor::transpose2d(Self) -> Self
 pub fn Tensor::zeros(Array[Int]) -> Self
 pub impl Add for Tensor
 pub impl Div for Tensor
