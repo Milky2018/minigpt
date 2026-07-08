@@ -1,0 +1,54 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/minigpt/tensor"
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct AutogradContext {
+  // private fields
+}
+pub fn AutogradContext::clear_graph(Self) -> Unit
+pub fn AutogradContext::new() -> Self
+pub fn AutogradContext::zero_grad(Self) -> Unit
+
+pub struct Tensor {
+  // private fields
+}
+pub fn Tensor::add(Self, Self) -> Self
+pub fn Tensor::backward(Self) -> Unit
+pub fn Tensor::data(Self) -> Array[Double]
+pub fn Tensor::div(Self, Self) -> Self
+pub fn Tensor::from_array(Array[Double], Array[Int]) -> Self
+pub fn Tensor::grad(Self) -> Self?
+pub fn Tensor::mean(Self) -> Self
+pub fn Tensor::mul(Self, Self) -> Self
+pub fn Tensor::neg(Self) -> Self
+pub fn Tensor::numel(Self) -> Int
+pub fn Tensor::ones(Array[Int]) -> Self
+pub fn Tensor::parameter(AutogradContext, Array[Double], Array[Int]) -> Self
+pub fn Tensor::requires_grad(Self) -> Bool
+pub fn Tensor::reshape(Self, Array[Int]) -> Self
+pub fn Tensor::scalar(Double) -> Self
+pub fn Tensor::shape(Self) -> Array[Int]
+pub fn Tensor::sub(Self, Self) -> Self
+pub fn Tensor::sum(Self) -> Self
+pub fn Tensor::zeros(Array[Int]) -> Self
+pub impl Add for Tensor
+pub impl Div for Tensor
+pub impl Mul for Tensor
+pub impl Neg for Tensor
+pub impl Sub for Tensor
+
+pub struct TokenIds {
+  // private fields
+}
+pub fn TokenIds::data(Self) -> Array[Int]
+pub fn TokenIds::new(Array[Int], Array[Int]) -> Self
+pub fn TokenIds::shape(Self) -> Array[Int]
+
+// Type aliases
+
+// Traits
+
