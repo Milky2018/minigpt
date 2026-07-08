@@ -1,5 +1,5 @@
 ///|
-const CHECKPOINT_VERSION : Int = 1
+const CHECKPOINT_VERSION : Int = 2
 
 ///|
 const CHECKPOINT_MAGIC : Int = 1296649799
@@ -10,7 +10,13 @@ priv struct MiniGPTCheckpoint {
   model_kind : String?
   vocabulary : Array[String]
   n_embd : Int
+  block_size : Int
   token_embedding_table : Array[Double]
+  position_embedding_table : Array[Double]
+  wq : Array[Double]
+  wk : Array[Double]
+  wv : Array[Double]
+  wo : Array[Double]
   lm_head : Array[Double]
 }
 
@@ -24,7 +30,13 @@ fn MiniGPTCheckpoint::from_model(
     model_kind: Some(model.kind_name()),
     vocabulary: tokenizer.vocabulary(),
     n_embd: model.n_embd(),
+    block_size: model.block_size(),
     token_embedding_table: model.token_embedding_data(),
+    position_embedding_table: model.position_embedding_data(),
+    wq: model.wq_data(),
+    wk: model.wk_data(),
+    wv: model.wv_data(),
+    wo: model.wo_data(),
     lm_head: model.lm_head_data(),
   }
 }
@@ -38,6 +50,19 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
   }
   let tokenizer = CharTokenizer::from_vocabulary(self.vocabulary)
   let model = match self.model_kind {
+    Some("tiny-transformer") =>
+      MiniGPT::from_transformer_parameters(
+        tokenizer.vocab_size(),
+        self.n_embd,
+        self.block_size,
+        self.token_embedding_table,
+        self.position_embedding_table,
+        self.wq,
+        self.wk,
+        self.wv,
+        self.wo,
+        self.lm_head,
+      )
     Some("full-rank-bigram") =>
       MiniGPT::from_full_rank_parameters(
         tokenizer.vocab_size(),
@@ -66,7 +91,13 @@ pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
     write_string(buffer, item)
   }
   buffer.write_int_le(checkpoint.n_embd)
+  buffer.write_int_le(checkpoint.block_size)
   write_doubles(buffer, checkpoint.token_embedding_table)
+  write_doubles(buffer, checkpoint.position_embedding_table)
+  write_doubles(buffer, checkpoint.wq)
+  write_doubles(buffer, checkpoint.wk)
+  write_doubles(buffer, checkpoint.wv)
+  write_doubles(buffer, checkpoint.wo)
   write_doubles(buffer, checkpoint.lm_head)
   buffer.to_bytes()
 }
@@ -79,9 +110,6 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     abort("invalid MiniGPT checkpoint magic")
   }
   let version = reader.read_int_le()
-  if version != CHECKPOINT_VERSION {
-    abort("unsupported MiniGPT checkpoint version")
-  }
   let model_kind = reader.read_string()
   let vocab_size = reader.read_int_le()
   let vocabulary : Array[String] = []
@@ -89,7 +117,23 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     vocabulary.push(reader.read_string())
   }
   let n_embd = reader.read_int_le()
+  let block_size = if version == 1 {
+    1
+  } else if version == CHECKPOINT_VERSION {
+    reader.read_int_le()
+  } else {
+    abort("unsupported MiniGPT checkpoint version")
+  }
   let token_embedding_table = reader.read_doubles()
+  let position_embedding_table = if version == 1 {
+    []
+  } else {
+    reader.read_doubles()
+  }
+  let wq = if version == 1 { [] } else { reader.read_doubles() }
+  let wk = if version == 1 { [] } else { reader.read_doubles() }
+  let wv = if version == 1 { [] } else { reader.read_doubles() }
+  let wo = if version == 1 { [] } else { reader.read_doubles() }
   let lm_head = reader.read_doubles()
   if !reader.is_done() {
     abort("checkpoint contains trailing bytes")
@@ -99,7 +143,13 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     model_kind: Some(model_kind),
     vocabulary,
     n_embd,
+    block_size,
     token_embedding_table,
+    position_embedding_table,
+    wq,
+    wk,
+    wv,
+    wo,
     lm_head,
   }
   checkpoint.to_model_and_tokenizer()

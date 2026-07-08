@@ -152,6 +152,12 @@ next-token matrix initialized from adjacent-token maximum-likelihood counts and
 then saved as normal model parameters.
 _Avoid_: Corpus substring lookup or side-channel sampler
 
+**Tiny Transformer Model**:
+The default MiniGPT backend: token and position embeddings, one causal
+self-attention block, and a linear language-model head trained with
+next-token cross entropy.
+_Avoid_: Full-rank bigram as the production CLI default
+
 **Gradient Checker**:
 A testing utility that compares autodiff gradients against finite-difference
 numerical gradients for small tensor programs.
@@ -175,8 +181,7 @@ _Avoid_: Re-training inside generation
 
 **Model Checkpoint**:
 A compact binary file containing checkpoint version, model kind, character
-vocabulary, embedding dimension, token embedding weights, and output projection
-weights.
+vocabulary, block size, embedding dimension, and trainable transformer weights.
 _Avoid_: Saving weights without tokenizer vocabulary
 
 **Completion Trace**:
@@ -185,6 +190,6 @@ token until the `--max-new-tokens` limit.
 _Avoid_: Final-only generation output
 
 **CLI Corpus Window**:
-The optional character prefix limit used by CLI demos to shrink the bigram
-checkpoint for smoke tests; `0` means use the full corpus and is the default.
+The optional character prefix limit used by CLI demos to shrink training inputs
+for smoke tests; `0` means use the full corpus and is the default.
 _Avoid_: Assuming the default model only saw a tiny corpus prefix

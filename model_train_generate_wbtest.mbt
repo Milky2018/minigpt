@@ -32,6 +32,8 @@ test "train_token_ids records one loss per step" {
     rng,
   )
   @test.assert_eq(stats.losses.length(), 3)
+  assert_true(stats.initial_eval_loss == stats.initial_eval_loss)
+  assert_true(stats.final_eval_loss == stats.final_eval_loss)
   for loss in stats.losses {
     assert_true(loss == loss)
   }

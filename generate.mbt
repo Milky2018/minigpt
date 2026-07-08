@@ -62,8 +62,41 @@ pub fn generate_next_token_id(
   top_k : Int,
   excluded_id : Int?,
 ) -> Int {
-  let logits = model.forward(@tensor.TokenIds::new([current_id], [1]))
-  sample_from_logits_with_options(logits, rng, top_k, excluded_id)
+  generate_next_token_id_from_context(
+    model,
+    [current_id],
+    rng,
+    top_k,
+    excluded_id,
+  )
+}
+
+///|
+pub fn generate_next_token_id_from_context(
+  model : MiniGPT,
+  context_ids : Array[Int],
+  rng : @random.Rand,
+  top_k : Int,
+  excluded_id : Int?,
+) -> Int {
+  if context_ids.length() == 0 {
+    abort("context_ids must not be empty")
+  }
+  let start = if context_ids.length() > model.block_size() {
+    context_ids.length() - model.block_size()
+  } else {
+    0
+  }
+  let context = context_ids[start:].to_owned()
+  let logits = model.forward(@tensor.TokenIds::new(context, [context.length()]))
+  let data = logits.data()
+  let vocab_size = model.vocab_size()
+  let offset = data.length() - vocab_size
+  let last_logits = @tensor.Tensor::from_array(
+    data[offset:data.length()].to_owned(),
+    [vocab_size],
+  )
+  sample_from_logits_with_options(last_logits, rng, top_k, excluded_id)
 }
 
 ///|
@@ -81,8 +114,9 @@ pub fn generate_token_ids(
   }
   let output = prompt_ids.copy()
   for _ in 0..<max_new_tokens {
-    let last_id = output[output.length() - 1]
-    output.push(generate_next_token_id(model, last_id, rng, 0, None))
+    output.push(
+      generate_next_token_id_from_context(model, output, rng, 0, None),
+    )
   }
   output
 }

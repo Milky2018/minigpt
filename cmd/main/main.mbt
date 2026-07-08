@@ -8,7 +8,7 @@ const DEFAULT_PROMPT : String = "春"
 const DEFAULT_MAX_NEW_TOKENS : Int = 80
 
 ///|
-const DEFAULT_BIGRAM_TOP_K : Int = 5
+const DEFAULT_TOP_K : Int = 5
 
 ///|
 const DEFAULT_MODEL_PATH : String = "minigpt-model.bin"
@@ -87,8 +87,8 @@ fn generate_options() -> Array[@argparse.OptionArg] {
       about="number of generated characters",
       default_values=[DEFAULT_MAX_NEW_TOKENS.to_string()],
     ),
-    OptionArg("top-k", long="top-k", about="bigram sampler top-k", default_values=[
-      DEFAULT_BIGRAM_TOP_K.to_string(),
+    OptionArg("top-k", long="top-k", about="sampler top-k", default_values=[
+      DEFAULT_TOP_K.to_string(),
     ]),
   ]
 }
@@ -159,12 +159,14 @@ fn load_token_ids(
 }
 
 ///|
-fn print_loss_summary(losses : Array[Double]) -> Unit {
-  if losses.length() == 0 {
+fn print_loss_summary(stats : @minigpt.TrainingStats) -> Unit {
+  println("initial eval loss: \{stats.initial_eval_loss}")
+  println("final eval loss: \{stats.final_eval_loss}")
+  if stats.losses.length() == 0 {
     println("losses: []")
   } else {
-    println("initial loss: \{losses[0]}")
-    println("final loss: \{losses[losses.length() - 1]}")
+    println("first train loss: \{stats.losses[0]}")
+    println("last train loss: \{stats.losses[stats.losses.length() - 1]}")
   }
 }
 
@@ -184,9 +186,8 @@ fn print_completion_trace(
   println("completion:")
   println(prompt)
   for _ in 0..<max_new_tokens {
-    let current_id = token_ids[token_ids.length() - 1]
-    let next_id = @minigpt.generate_next_token_id(
-      model, current_id, rng, top_k, excluded_id,
+    let next_id = @minigpt.generate_next_token_id_from_context(
+      model, token_ids, rng, top_k, excluded_id,
     )
     token_ids.push(next_id)
     let text = tokenizer.decode(token_ids) catch {
@@ -211,15 +212,16 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("tokens: \{ids.length()}")
   println("steps: \{config.steps}")
   println("checkpoint: \{out_path}")
-  let model = @minigpt.MiniGPT::from_bigram_counts(
+  let model = @minigpt.MiniGPT::new_transformer_with_options(
     tokenizer.vocab_size(),
-    ids,
-    0.1,
+    @minigpt.N_EMBD,
+    config.block_size,
+    rng,
   )
   println("model kind: \{model.kind_name()}")
   println("n_embd: \{model.n_embd()}")
   let stats = @minigpt.train_token_ids(model, ids, config, rng)
-  print_loss_summary(stats.losses)
+  print_loss_summary(stats)
   let checkpoint = @minigpt.encode_checkpoint(model, tokenizer)
   @fs.write_bytes_to_file(out_path, checkpoint) catch {
     _ => abort("failed to write checkpoint '\{out_path}'")

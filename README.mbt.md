@@ -2,7 +2,7 @@
 
 这是一个用 MoonBit 写的极简中文自动补全程序。它用 2MB 以内的古诗 UTF-8 文本训练字符级语言模型，然后根据 prompt 逐步补全文本。
 
-当前默认模型是 full-rank character bigram：每个字符直接学习一个完整的后继字符 logits 分布。它不是语料检索，不会复制 prompt 后面的原文片段。
+当前默认模型是一个很小的字符级 transformer：token embedding + position embedding + 单层单头 causal self-attention + 输出投影。它不是语料检索，不会复制 prompt 后面的原文片段。
 
 ## 数据
 
@@ -40,7 +40,7 @@ moon run --release cmd/main -- train --out minigpt-model.bin
 --out             checkpoint 输出路径，默认 minigpt-model.bin
 --steps           梯度训练步数，默认 10
 --batch-size      batch size，默认 4
---block-size      上下文长度，默认 4
+--block-size      上下文长度，默认 8
 --learning-rate   学习率，默认 0.001
 ```
 
@@ -77,16 +77,18 @@ completion:
 
 ## Checkpoint 大小
 
-当前 checkpoint 使用紧凑二进制格式。默认 full-rank bigram 会保存一个 `[vocab_size, vocab_size]` logits 矩阵。
+当前 checkpoint 使用紧凑二进制格式。默认 tiny transformer 会保存 embedding、attention projection 和输出投影参数。
 
 默认完整语料配置大致为：
 
 ```text
 max chars = 0
-vocab size ~= 5934
-model kind = full-rank-bigram
-parameters = vocab_size * vocab_size ~= 35,212,356 Doubles
-binary checkpoint ~= 269MB
+vocab size ~= 5819
+model kind = tiny-transformer
+n_embd = 32
+block size = 8
+parameters ~= 377K Doubles
+binary checkpoint ~= 2.9MB
 ```
 
 如果希望 checkpoint 小一点，可以限制 `--max-chars`：

@@ -57,12 +57,12 @@ internals: {
 }
 
 block: {
-  norm1: "LayerNorm"
+  qkv: "Q/K/V projection"
   attn: "Causal self-attention"
-  norm2: "LayerNorm"
-  ffn: "Feed-forward"
+  proj: "Output projection"
+  resid: "Residual add"
 
-  norm1 -> attn
-  attn -> norm2: "residual"
-  norm2 -> ffn
+  qkv -> attn
+  attn -> proj
+  proj -> resid
 }
