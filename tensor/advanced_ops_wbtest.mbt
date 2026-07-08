@@ -45,6 +45,11 @@ test "exp log relu values and gradients" {
 }
 
 ///|
+test "gelu passes gradient check" {
+  assert_true(check_grad([-1.0, -0.2, 0.4, 1.3], [4], fn(t) { t.gelu().sum() }))
+}
+
+///|
 test "softmax normalizes rows and passes gradient check" {
   let x = Tensor::from_array([1.0, 2.0, 3.0, 2.0], [2, 2])
   let y = x.softmax(1)
@@ -59,6 +64,45 @@ test "softmax normalizes rows and passes gradient check" {
   assert_true(
     check_grad([0.2, -0.4, 0.7, 1.3], [2, 2], fn(t) {
       (t.softmax(1) * Tensor::from_array([0.3, -0.2, 0.5, 0.1], [2, 2])).sum()
+    }),
+  )
+}
+
+///|
+test "layer_norm normalizes last dimension and propagates gradients" {
+  let ctx = AutogradContext::new()
+  let x = Tensor::parameter(ctx, [1.0, 3.0, 2.0, 4.0], [2, 2])
+  let weight = Tensor::parameter(ctx, [2.0, 3.0], [2])
+  let bias = Tensor::parameter(ctx, [0.5, -0.5], [2])
+  let y = x.layer_norm(weight, bias, 0.0)
+  @test.assert_eq(y.shape(), [2, 2])
+  assert_array_close(y.data(), [-1.5, 2.5, -1.5, 2.5])
+  y.sum().backward()
+  match weight.grad() {
+    Some(g) => assert_array_close(g.data(), [-2.0, 2.0])
+    None => abort("expected weight gradient")
+  }
+  match bias.grad() {
+    Some(g) => assert_array_close(g.data(), [2.0, 2.0])
+    None => abort("expected bias gradient")
+  }
+  match x.grad() {
+    Some(g) => assert_array_close(g.data(), [0.0, 0.0, 0.0, 0.0])
+    None => abort("expected input gradient")
+  }
+}
+
+///|
+test "layer_norm passes gradient check" {
+  assert_true(
+    check_grad([0.2, -0.4, 0.7, 1.3, 0.1, -0.8], [2, 3], fn(t) {
+      t
+      .layer_norm(
+        Tensor::from_array([1.0, 1.5, 0.5], [3]),
+        Tensor::from_array([0.1, -0.2, 0.3], [3]),
+        1.0e-5,
+      )
+      .sum()
     }),
   )
 }

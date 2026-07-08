@@ -2,7 +2,7 @@
 
 这是一个用 MoonBit 写的极简中文自动补全程序。它用 2MB 以内的古诗 UTF-8 文本训练字符级语言模型，然后根据 prompt 逐步补全文本。
 
-当前默认模型是一个很小的字符级 transformer：token embedding + position embedding + 单层单头 causal self-attention + 输出投影。它不是语料检索，不会复制 prompt 后面的原文片段。
+当前默认模型是一个小型字符级 GPT transformer：token embedding + position embedding + 2 层 decoder block。每个 block 包含 pre-norm multi-head causal self-attention、MLP/GELU 和残差连接，最后用 tied token embedding 作为输出头。它不是语料检索，不会复制 prompt 后面的原文片段。
 
 ## 数据
 
@@ -77,18 +77,20 @@ completion:
 
 ## Checkpoint 大小
 
-当前 checkpoint 使用紧凑二进制格式。默认 tiny transformer 会保存 embedding、attention projection 和输出投影参数。
+当前 checkpoint 使用紧凑二进制格式。默认 GPT transformer 会保存 embedding、每层 LayerNorm、attention projection、MLP 参数和最终 LayerNorm；输出头复用 token embedding，不再单独保存一份 lm head。
 
 默认完整语料配置大致为：
 
 ```text
 max chars = 0
 vocab size ~= 5819
-model kind = tiny-transformer
+model kind = gpt-transformer
 n_embd = 32
+n_head = 4
+n_layer = 2
 block size = 8
-parameters ~= 377K Doubles
-binary checkpoint ~= 2.9MB
+parameters ~= 212K Doubles
+binary checkpoint ~= 1.7MB
 ```
 
 如果希望 checkpoint 小一点，可以限制 `--max-chars`：

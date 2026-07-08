@@ -1,5 +1,5 @@
 ///|
-const CHECKPOINT_VERSION : Int = 2
+const CHECKPOINT_VERSION : Int = 3
 
 ///|
 const CHECKPOINT_MAGIC : Int = 1296649799
@@ -10,14 +10,10 @@ priv struct MiniGPTCheckpoint {
   model_kind : String?
   vocabulary : Array[String]
   n_embd : Int
+  n_head : Int
+  n_layer : Int
   block_size : Int
-  token_embedding_table : Array[Double]
-  position_embedding_table : Array[Double]
-  wq : Array[Double]
-  wk : Array[Double]
-  wv : Array[Double]
-  wo : Array[Double]
-  lm_head : Array[Double]
+  parameters : MiniGPTParameterData
 }
 
 ///|
@@ -30,14 +26,10 @@ fn MiniGPTCheckpoint::from_model(
     model_kind: Some(model.kind_name()),
     vocabulary: tokenizer.vocabulary(),
     n_embd: model.n_embd(),
+    n_head: model.n_head(),
+    n_layer: model.n_layer(),
     block_size: model.block_size(),
-    token_embedding_table: model.token_embedding_data(),
-    position_embedding_table: model.position_embedding_data(),
-    wq: model.wq_data(),
-    wk: model.wk_data(),
-    wv: model.wv_data(),
-    wo: model.wo_data(),
-    lm_head: model.lm_head_data(),
+    parameters: model.parameter_data(),
   }
 }
 
@@ -48,21 +40,17 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
   if self.version != CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
-  if self.model_kind != Some("tiny-transformer") {
+  if self.model_kind != Some("gpt-transformer") {
     abort("unsupported MiniGPT checkpoint model kind")
   }
   let tokenizer = CharTokenizer::from_vocabulary(self.vocabulary)
-  let model = MiniGPT::from_transformer_parameters(
+  let model = MiniGPT::from_parameter_data(
     tokenizer.vocab_size(),
     self.n_embd,
+    self.n_head,
+    self.n_layer,
     self.block_size,
-    self.token_embedding_table,
-    self.position_embedding_table,
-    self.wq,
-    self.wk,
-    self.wv,
-    self.wo,
-    self.lm_head,
+    self.parameters,
   )
   (model, tokenizer)
 }
@@ -70,6 +58,7 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
 ///|
 pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
   let checkpoint = MiniGPTCheckpoint::from_model(model, tokenizer)
+  let params = checkpoint.parameters
   let buffer = Buffer::Buffer()
   buffer.write_int_le(CHECKPOINT_MAGIC)
   buffer.write_int_le(CHECKPOINT_VERSION)
@@ -79,14 +68,29 @@ pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
     write_string(buffer, item)
   }
   buffer.write_int_le(checkpoint.n_embd)
+  buffer.write_int_le(checkpoint.n_head)
+  buffer.write_int_le(checkpoint.n_layer)
   buffer.write_int_le(checkpoint.block_size)
-  write_doubles(buffer, checkpoint.token_embedding_table)
-  write_doubles(buffer, checkpoint.position_embedding_table)
-  write_doubles(buffer, checkpoint.wq)
-  write_doubles(buffer, checkpoint.wk)
-  write_doubles(buffer, checkpoint.wv)
-  write_doubles(buffer, checkpoint.wo)
-  write_doubles(buffer, checkpoint.lm_head)
+  write_doubles(buffer, params.token_embedding_table)
+  write_doubles(buffer, params.position_embedding_table)
+  write_double_arrays(buffer, params.ln1_weight)
+  write_double_arrays(buffer, params.ln1_bias)
+  write_double_arrays(buffer, params.wq)
+  write_double_arrays(buffer, params.bq)
+  write_double_arrays(buffer, params.wk)
+  write_double_arrays(buffer, params.bk)
+  write_double_arrays(buffer, params.wv)
+  write_double_arrays(buffer, params.bv)
+  write_double_arrays(buffer, params.wo)
+  write_double_arrays(buffer, params.bo)
+  write_double_arrays(buffer, params.ln2_weight)
+  write_double_arrays(buffer, params.ln2_bias)
+  write_double_arrays(buffer, params.w_fc)
+  write_double_arrays(buffer, params.b_fc)
+  write_double_arrays(buffer, params.w_proj)
+  write_double_arrays(buffer, params.b_proj)
+  write_doubles(buffer, params.ln_f_weight)
+  write_doubles(buffer, params.ln_f_bias)
   buffer.to_bytes()
 }
 
@@ -108,14 +112,31 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     vocabulary.push(reader.read_string())
   }
   let n_embd = reader.read_int_le()
+  let n_head = reader.read_int_le()
+  let n_layer = reader.read_int_le()
   let block_size = reader.read_int_le()
-  let token_embedding_table = reader.read_doubles()
-  let position_embedding_table = reader.read_doubles()
-  let wq = reader.read_doubles()
-  let wk = reader.read_doubles()
-  let wv = reader.read_doubles()
-  let wo = reader.read_doubles()
-  let lm_head = reader.read_doubles()
+  let parameters : MiniGPTParameterData = {
+    token_embedding_table: reader.read_doubles(),
+    position_embedding_table: reader.read_doubles(),
+    ln1_weight: reader.read_double_arrays(),
+    ln1_bias: reader.read_double_arrays(),
+    wq: reader.read_double_arrays(),
+    bq: reader.read_double_arrays(),
+    wk: reader.read_double_arrays(),
+    bk: reader.read_double_arrays(),
+    wv: reader.read_double_arrays(),
+    bv: reader.read_double_arrays(),
+    wo: reader.read_double_arrays(),
+    bo: reader.read_double_arrays(),
+    ln2_weight: reader.read_double_arrays(),
+    ln2_bias: reader.read_double_arrays(),
+    w_fc: reader.read_double_arrays(),
+    b_fc: reader.read_double_arrays(),
+    w_proj: reader.read_double_arrays(),
+    b_proj: reader.read_double_arrays(),
+    ln_f_weight: reader.read_doubles(),
+    ln_f_bias: reader.read_doubles(),
+  }
   if !reader.is_done() {
     abort("checkpoint contains trailing bytes")
   }
@@ -124,14 +145,10 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
     model_kind: Some(model_kind),
     vocabulary,
     n_embd,
+    n_head,
+    n_layer,
     block_size,
-    token_embedding_table,
-    position_embedding_table,
-    wq,
-    wk,
-    wv,
-    wo,
-    lm_head,
+    parameters,
   }
   checkpoint.to_model_and_tokenizer()
 }
@@ -148,6 +165,14 @@ fn write_doubles(buffer : Buffer, values : Array[Double]) -> Unit {
   buffer.write_int_le(values.length())
   for value in values {
     buffer.write_double_le(value)
+  }
+}
+
+///|
+fn write_double_arrays(buffer : Buffer, values : Array[Array[Double]]) -> Unit {
+  buffer.write_int_le(values.length())
+  for value in values {
+    write_doubles(buffer, value)
   }
 }
 
@@ -229,6 +254,19 @@ fn BytesReader::read_doubles(self : BytesReader) -> Array[Double] {
   let values : Array[Double] = []
   for _ in 0..<length {
     values.push(self.read_double_le())
+  }
+  values
+}
+
+///|
+fn BytesReader::read_double_arrays(self : BytesReader) -> Array[Array[Double]] {
+  let length = self.read_int_le()
+  if length < 0 {
+    abort("invalid checkpoint nested array length")
+  }
+  let values : Array[Array[Double]] = []
+  for _ in 0..<length {
+    values.push(self.read_doubles())
   }
   values
 }

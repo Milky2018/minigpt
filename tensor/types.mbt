@@ -30,9 +30,11 @@ priv enum NodeKind {
   Exp(Int?, Array[Double], Array[Int])
   Log(Int?, Array[Double], Array[Int])
   Relu(Int?, Array[Double], Array[Int])
+  Gelu(Int?, Array[Double], Array[Int])
   SwapAxes(Int?, Array[Int], Int, Int)
   Matmul(Int?, Array[Double], Array[Int], Int?, Array[Double], Array[Int])
   Softmax(Int?, Array[Double], Int)
+  LayerNorm(Int?, Array[Double], Array[Int], Int?, Array[Double], Int?, Double)
   GatherRows(Int?, Array[Int], Array[Int])
   CrossEntropy(Int?, Array[Double], Array[Int], Array[Int])
 }

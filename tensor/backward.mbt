@@ -129,6 +129,24 @@ fn backward_node(ctx : AutogradContext, id : Int, grad : Array[Double]) -> Unit 
         }
         None => ()
       }
+    Gelu(parent, input_data, input_shape) =>
+      match parent {
+        Some(id) => {
+          let k = 0.7978845608028654
+          let c = 0.044715
+          let g = Array::make(grad.length(), 0.0)
+          for i in 0..<g.length() {
+            let x = input_data[i]
+            let u = k * (x + c * x * x * x)
+            let t = @math.tanh(u)
+            let du = k * (1.0 + 3.0 * c * x * x)
+            let derivative = 0.5 * (1.0 + t) + 0.5 * x * (1.0 - t * t) * du
+            g[i] = grad[i] * derivative
+          }
+          ctx.add_grad(id, reduce_to_shape(g, node.shape, input_shape))
+        }
+        None => ()
+      }
     SwapAxes(parent, parent_shape, axis_a, axis_b) =>
       match parent {
         Some(id) => {
@@ -198,6 +216,69 @@ fn backward_node(ctx : AutogradContext, id : Int, grad : Array[Double]) -> Unit 
         }
         None => ()
       }
+    LayerNorm(
+      x_parent,
+      input_data,
+      input_shape,
+      weight_parent,
+      weight_data,
+      bias_parent,
+      eps
+    ) => {
+      let hidden = input_shape[input_shape.length() - 1]
+      let rows = shape_size(input_shape) / hidden
+      let x_grad = Array::make(shape_size(input_shape), 0.0)
+      let weight_grad = Array::make(hidden, 0.0)
+      let bias_grad = Array::make(hidden, 0.0)
+      for row in 0..<rows {
+        let base = row * hidden
+        let mut mean = 0.0
+        for i in 0..<hidden {
+          mean += input_data[base + i]
+        }
+        mean = mean / hidden.to_double()
+        let mut variance = 0.0
+        for i in 0..<hidden {
+          let centered = input_data[base + i] - mean
+          variance += centered * centered
+        }
+        variance = variance / hidden.to_double()
+        let inv_std = 1.0 / (variance + eps).sqrt()
+        let xhat = Array::make(hidden, 0.0)
+        let dxhat = Array::make(hidden, 0.0)
+        let mut sum_dxhat = 0.0
+        let mut sum_dxhat_xhat = 0.0
+        for i in 0..<hidden {
+          xhat[i] = (input_data[base + i] - mean) * inv_std
+          dxhat[i] = grad[base + i] * weight_data[i]
+          sum_dxhat += dxhat[i]
+          sum_dxhat_xhat += dxhat[i] * xhat[i]
+          weight_grad[i] += grad[base + i] * xhat[i]
+          bias_grad[i] += grad[base + i]
+        }
+        for i in 0..<hidden {
+          x_grad[base + i] = inv_std *
+            (
+              hidden.to_double() * dxhat[i] -
+              sum_dxhat -
+              xhat[i] * sum_dxhat_xhat
+            ) /
+            hidden.to_double()
+        }
+      }
+      match x_parent {
+        Some(id) => ctx.add_grad(id, x_grad)
+        None => ()
+      }
+      match weight_parent {
+        Some(id) => ctx.add_grad(id, weight_grad)
+        None => ()
+      }
+      match bias_parent {
+        Some(id) => ctx.add_grad(id, bias_grad)
+        None => ()
+      }
+    }
     GatherRows(parent, ids, weight_shape) =>
       match parent {
         Some(id) => {

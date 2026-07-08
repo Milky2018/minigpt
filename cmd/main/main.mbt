@@ -220,6 +220,8 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   )
   println("model kind: \{model.kind_name()}")
   println("n_embd: \{model.n_embd()}")
+  println("n_head: \{model.n_head()}")
+  println("n_layer: \{model.n_layer()}")
   let stats = @minigpt.train_token_ids(model, ids, config, rng)
   print_loss_summary(stats)
   let checkpoint = @minigpt.encode_checkpoint(model, tokenizer)
@@ -248,6 +250,8 @@ fn run_generate(matches : @argparse.Matches) -> Unit {
   println("model: \{model_path}")
   println("vocab size: \{tokenizer.vocab_size()}")
   println("n_embd: \{model.n_embd()}")
+  println("n_head: \{model.n_head()}")
+  println("n_layer: \{model.n_layer()}")
   println("model kind: \{model.kind_name()}")
   let newline_ids = tokenizer.encode("\n") catch { _ => [] }
   let excluded_id = if newline_ids.length() > 0 {

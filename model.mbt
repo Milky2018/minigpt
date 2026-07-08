@@ -2,20 +2,71 @@
 pub const N_EMBD : Int = 32
 
 ///|
-const KIND_TRANSFORMER : String = "tiny-transformer"
+pub const N_HEAD : Int = 4
+
+///|
+pub const N_LAYER : Int = 2
+
+///|
+pub const MLP_MULTIPLIER : Int = 4
+
+///|
+const LAYER_NORM_EPS : Double = 1.0e-5
+
+///|
+const KIND_TRANSFORMER : String = "gpt-transformer"
+
+///|
+priv struct MiniGPTParameterData {
+  token_embedding_table : Array[Double]
+  position_embedding_table : Array[Double]
+  ln1_weight : Array[Array[Double]]
+  ln1_bias : Array[Array[Double]]
+  wq : Array[Array[Double]]
+  bq : Array[Array[Double]]
+  wk : Array[Array[Double]]
+  bk : Array[Array[Double]]
+  wv : Array[Array[Double]]
+  bv : Array[Array[Double]]
+  wo : Array[Array[Double]]
+  bo : Array[Array[Double]]
+  ln2_weight : Array[Array[Double]]
+  ln2_bias : Array[Array[Double]]
+  w_fc : Array[Array[Double]]
+  b_fc : Array[Array[Double]]
+  w_proj : Array[Array[Double]]
+  b_proj : Array[Array[Double]]
+  ln_f_weight : Array[Double]
+  ln_f_bias : Array[Double]
+}
 
 ///|
 pub struct MiniGPT {
   ctx : @tensor.AutogradContext
   token_embedding_table : @tensor.Tensor
   position_embedding_table : @tensor.Tensor
-  wq : @tensor.Tensor
-  wk : @tensor.Tensor
-  wv : @tensor.Tensor
-  wo : @tensor.Tensor
-  lm_head : @tensor.Tensor
+  ln1_weight : Array[@tensor.Tensor]
+  ln1_bias : Array[@tensor.Tensor]
+  wq : Array[@tensor.Tensor]
+  bq : Array[@tensor.Tensor]
+  wk : Array[@tensor.Tensor]
+  bk : Array[@tensor.Tensor]
+  wv : Array[@tensor.Tensor]
+  bv : Array[@tensor.Tensor]
+  wo : Array[@tensor.Tensor]
+  bo : Array[@tensor.Tensor]
+  ln2_weight : Array[@tensor.Tensor]
+  ln2_bias : Array[@tensor.Tensor]
+  w_fc : Array[@tensor.Tensor]
+  b_fc : Array[@tensor.Tensor]
+  w_proj : Array[@tensor.Tensor]
+  b_proj : Array[@tensor.Tensor]
+  ln_f_weight : @tensor.Tensor
+  ln_f_bias : @tensor.Tensor
   vocab_size : Int
   n_embd : Int
+  n_head : Int
+  n_layer : Int
   block_size : Int
 }
 
@@ -40,88 +91,133 @@ pub fn MiniGPT::new_transformer_with_options(
   block_size : Int,
   rng : @random.Rand,
 ) -> MiniGPT {
-  if vocab_size <= 0 {
-    abort("vocab_size must be positive")
-  }
-  if n_embd <= 0 {
-    abort("n_embd must be positive")
-  }
-  if block_size <= 0 {
-    abort("block_size must be positive")
-  }
-  let ctx = @tensor.AutogradContext::new()
-  let token_embedding_table = scaled_randn(ctx, [vocab_size, n_embd], rng)
-  let position_embedding_table = scaled_randn(ctx, [block_size, n_embd], rng)
-  let wq = scaled_randn(ctx, [n_embd, n_embd], rng)
-  let wk = scaled_randn(ctx, [n_embd, n_embd], rng)
-  let wv = scaled_randn(ctx, [n_embd, n_embd], rng)
-  let wo = scaled_randn(ctx, [n_embd, n_embd], rng)
-  let lm_head = scaled_randn(ctx, [n_embd, vocab_size], rng)
-  {
-    ctx,
-    token_embedding_table,
-    position_embedding_table,
-    wq,
-    wk,
-    wv,
-    wo,
-    lm_head,
+  MiniGPT::new_gpt_with_options(
     vocab_size,
     n_embd,
+    N_HEAD,
+    N_LAYER,
+    block_size,
+    rng,
+  )
+}
+
+///|
+fn MiniGPT::new_gpt_with_options(
+  vocab_size : Int,
+  n_embd : Int,
+  n_head : Int,
+  n_layer : Int,
+  block_size : Int,
+  rng : @random.Rand,
+) -> MiniGPT {
+  validate_transformer_options(vocab_size, n_embd, n_head, n_layer, block_size)
+  let ctx = @tensor.AutogradContext::new()
+  let mlp_hidden = n_embd * MLP_MULTIPLIER
+  {
+    ctx,
+    token_embedding_table: scaled_randn(ctx, [vocab_size, n_embd], rng),
+    position_embedding_table: scaled_randn(ctx, [block_size, n_embd], rng),
+    ln1_weight: repeated_parameter(ctx, n_layer, [n_embd], 1.0),
+    ln1_bias: repeated_parameter(ctx, n_layer, [n_embd], 0.0),
+    wq: repeated_scaled_randn(ctx, n_layer, [n_embd, n_embd], rng),
+    bq: repeated_parameter(ctx, n_layer, [n_embd], 0.0),
+    wk: repeated_scaled_randn(ctx, n_layer, [n_embd, n_embd], rng),
+    bk: repeated_parameter(ctx, n_layer, [n_embd], 0.0),
+    wv: repeated_scaled_randn(ctx, n_layer, [n_embd, n_embd], rng),
+    bv: repeated_parameter(ctx, n_layer, [n_embd], 0.0),
+    wo: repeated_scaled_randn(ctx, n_layer, [n_embd, n_embd], rng),
+    bo: repeated_parameter(ctx, n_layer, [n_embd], 0.0),
+    ln2_weight: repeated_parameter(ctx, n_layer, [n_embd], 1.0),
+    ln2_bias: repeated_parameter(ctx, n_layer, [n_embd], 0.0),
+    w_fc: repeated_scaled_randn(ctx, n_layer, [n_embd, mlp_hidden], rng),
+    b_fc: repeated_parameter(ctx, n_layer, [mlp_hidden], 0.0),
+    w_proj: repeated_scaled_randn(ctx, n_layer, [mlp_hidden, n_embd], rng),
+    b_proj: repeated_parameter(ctx, n_layer, [n_embd], 0.0),
+    ln_f_weight: parameter(ctx, [n_embd], 1.0),
+    ln_f_bias: parameter(ctx, [n_embd], 0.0),
+    vocab_size,
+    n_embd,
+    n_head,
+    n_layer,
     block_size,
   }
 }
 
 ///|
-pub fn MiniGPT::from_transformer_parameters(
+fn MiniGPT::from_parameter_data(
   vocab_size : Int,
   n_embd : Int,
+  n_head : Int,
+  n_layer : Int,
   block_size : Int,
-  token_embedding_table : Array[Double],
-  position_embedding_table : Array[Double],
-  wq : Array[Double],
-  wk : Array[Double],
-  wv : Array[Double],
-  wo : Array[Double],
-  lm_head : Array[Double],
+  data : MiniGPTParameterData,
 ) -> MiniGPT {
+  validate_transformer_options(vocab_size, n_embd, n_head, n_layer, block_size)
+  let ctx = @tensor.AutogradContext::new()
+  let mlp_hidden = n_embd * MLP_MULTIPLIER
+  {
+    ctx,
+    token_embedding_table: @tensor.Tensor::parameter(
+      ctx,
+      data.token_embedding_table,
+      [vocab_size, n_embd],
+    ),
+    position_embedding_table: @tensor.Tensor::parameter(
+      ctx,
+      data.position_embedding_table,
+      [block_size, n_embd],
+    ),
+    ln1_weight: parameter_array(ctx, data.ln1_weight, n_layer, [n_embd]),
+    ln1_bias: parameter_array(ctx, data.ln1_bias, n_layer, [n_embd]),
+    wq: parameter_array(ctx, data.wq, n_layer, [n_embd, n_embd]),
+    bq: parameter_array(ctx, data.bq, n_layer, [n_embd]),
+    wk: parameter_array(ctx, data.wk, n_layer, [n_embd, n_embd]),
+    bk: parameter_array(ctx, data.bk, n_layer, [n_embd]),
+    wv: parameter_array(ctx, data.wv, n_layer, [n_embd, n_embd]),
+    bv: parameter_array(ctx, data.bv, n_layer, [n_embd]),
+    wo: parameter_array(ctx, data.wo, n_layer, [n_embd, n_embd]),
+    bo: parameter_array(ctx, data.bo, n_layer, [n_embd]),
+    ln2_weight: parameter_array(ctx, data.ln2_weight, n_layer, [n_embd]),
+    ln2_bias: parameter_array(ctx, data.ln2_bias, n_layer, [n_embd]),
+    w_fc: parameter_array(ctx, data.w_fc, n_layer, [n_embd, mlp_hidden]),
+    b_fc: parameter_array(ctx, data.b_fc, n_layer, [mlp_hidden]),
+    w_proj: parameter_array(ctx, data.w_proj, n_layer, [mlp_hidden, n_embd]),
+    b_proj: parameter_array(ctx, data.b_proj, n_layer, [n_embd]),
+    ln_f_weight: @tensor.Tensor::parameter(ctx, data.ln_f_weight, [n_embd]),
+    ln_f_bias: @tensor.Tensor::parameter(ctx, data.ln_f_bias, [n_embd]),
+    vocab_size,
+    n_embd,
+    n_head,
+    n_layer,
+    block_size,
+  }
+}
+
+///|
+fn validate_transformer_options(
+  vocab_size : Int,
+  n_embd : Int,
+  n_head : Int,
+  n_layer : Int,
+  block_size : Int,
+) -> Unit {
   if vocab_size <= 0 {
     abort("vocab_size must be positive")
   }
   if n_embd <= 0 {
     abort("n_embd must be positive")
   }
+  if n_head <= 0 {
+    abort("n_head must be positive")
+  }
+  if n_embd % n_head != 0 {
+    abort("n_embd must be divisible by n_head")
+  }
+  if n_layer <= 0 {
+    abort("n_layer must be positive")
+  }
   if block_size <= 0 {
     abort("block_size must be positive")
-  }
-  let ctx = @tensor.AutogradContext::new()
-  let token_embedding_table = @tensor.Tensor::parameter(
-    ctx,
-    token_embedding_table,
-    [vocab_size, n_embd],
-  )
-  let position_embedding_table = @tensor.Tensor::parameter(
-    ctx,
-    position_embedding_table,
-    [block_size, n_embd],
-  )
-  let wq = @tensor.Tensor::parameter(ctx, wq, [n_embd, n_embd])
-  let wk = @tensor.Tensor::parameter(ctx, wk, [n_embd, n_embd])
-  let wv = @tensor.Tensor::parameter(ctx, wv, [n_embd, n_embd])
-  let wo = @tensor.Tensor::parameter(ctx, wo, [n_embd, n_embd])
-  let lm_head = @tensor.Tensor::parameter(ctx, lm_head, [n_embd, vocab_size])
-  {
-    ctx,
-    token_embedding_table,
-    position_embedding_table,
-    wq,
-    wk,
-    wv,
-    wo,
-    lm_head,
-    vocab_size,
-    n_embd,
-    block_size,
   }
 }
 
@@ -141,6 +237,85 @@ fn scaled_randn(
 }
 
 ///|
+fn parameter(
+  ctx : @tensor.AutogradContext,
+  shape : Array[Int],
+  value : Double,
+) -> @tensor.Tensor {
+  @tensor.Tensor::parameter(
+    ctx,
+    Array::make(shape_size_local(shape), value),
+    shape,
+  )
+}
+
+///|
+fn repeated_parameter(
+  ctx : @tensor.AutogradContext,
+  count : Int,
+  shape : Array[Int],
+  value : Double,
+) -> Array[@tensor.Tensor] {
+  let tensors : Array[@tensor.Tensor] = []
+  for _ in 0..<count {
+    tensors.push(parameter(ctx, shape, value))
+  }
+  tensors
+}
+
+///|
+fn repeated_scaled_randn(
+  ctx : @tensor.AutogradContext,
+  count : Int,
+  shape : Array[Int],
+  rng : @random.Rand,
+) -> Array[@tensor.Tensor] {
+  let tensors : Array[@tensor.Tensor] = []
+  for _ in 0..<count {
+    tensors.push(scaled_randn(ctx, shape, rng))
+  }
+  tensors
+}
+
+///|
+fn parameter_array(
+  ctx : @tensor.AutogradContext,
+  values : Array[Array[Double]],
+  count : Int,
+  shape : Array[Int],
+) -> Array[@tensor.Tensor] {
+  if values.length() != count {
+    abort("checkpoint parameter array count does not match n_layer")
+  }
+  let tensors : Array[@tensor.Tensor] = []
+  for value in values {
+    tensors.push(@tensor.Tensor::parameter(ctx, value, shape))
+  }
+  tensors
+}
+
+///|
+fn shape_size_local(shape : Array[Int]) -> Int {
+  let mut size = 1
+  for dim in shape {
+    if dim < 0 {
+      abort("shape dimensions must not be negative")
+    }
+    size *= dim
+  }
+  size
+}
+
+///|
+fn tensors_data(tensors : Array[@tensor.Tensor]) -> Array[Array[Double]] {
+  let data : Array[Array[Double]] = []
+  for tensor in tensors {
+    data.push(tensor.data())
+  }
+  data
+}
+
+///|
 pub fn MiniGPT::vocab_size(self : MiniGPT) -> Int {
   self.vocab_size
 }
@@ -148,6 +323,16 @@ pub fn MiniGPT::vocab_size(self : MiniGPT) -> Int {
 ///|
 pub fn MiniGPT::n_embd(self : MiniGPT) -> Int {
   self.n_embd
+}
+
+///|
+pub fn MiniGPT::n_head(self : MiniGPT) -> Int {
+  self.n_head
+}
+
+///|
+pub fn MiniGPT::n_layer(self : MiniGPT) -> Int {
+  self.n_layer
 }
 
 ///|
@@ -171,28 +356,29 @@ pub fn MiniGPT::position_embedding_data(self : MiniGPT) -> Array[Double] {
 }
 
 ///|
-pub fn MiniGPT::wq_data(self : MiniGPT) -> Array[Double] {
-  self.wq.data()
-}
-
-///|
-pub fn MiniGPT::wk_data(self : MiniGPT) -> Array[Double] {
-  self.wk.data()
-}
-
-///|
-pub fn MiniGPT::wv_data(self : MiniGPT) -> Array[Double] {
-  self.wv.data()
-}
-
-///|
-pub fn MiniGPT::wo_data(self : MiniGPT) -> Array[Double] {
-  self.wo.data()
-}
-
-///|
-pub fn MiniGPT::lm_head_data(self : MiniGPT) -> Array[Double] {
-  self.lm_head.data()
+fn MiniGPT::parameter_data(self : MiniGPT) -> MiniGPTParameterData {
+  {
+    token_embedding_table: self.token_embedding_table.data(),
+    position_embedding_table: self.position_embedding_table.data(),
+    ln1_weight: tensors_data(self.ln1_weight),
+    ln1_bias: tensors_data(self.ln1_bias),
+    wq: tensors_data(self.wq),
+    bq: tensors_data(self.bq),
+    wk: tensors_data(self.wk),
+    bk: tensors_data(self.bk),
+    wv: tensors_data(self.wv),
+    bv: tensors_data(self.bv),
+    wo: tensors_data(self.wo),
+    bo: tensors_data(self.bo),
+    ln2_weight: tensors_data(self.ln2_weight),
+    ln2_bias: tensors_data(self.ln2_bias),
+    w_fc: tensors_data(self.w_fc),
+    b_fc: tensors_data(self.b_fc),
+    w_proj: tensors_data(self.w_proj),
+    b_proj: tensors_data(self.b_proj),
+    ln_f_weight: self.ln_f_weight.data(),
+    ln_f_bias: self.ln_f_bias.data(),
+  }
 }
 
 ///|
@@ -233,27 +419,114 @@ fn causal_mask(time : Int) -> @tensor.Tensor {
 }
 
 ///|
+fn linear(
+  input : @tensor.Tensor,
+  weight : @tensor.Tensor,
+  bias : @tensor.Tensor,
+) -> @tensor.Tensor {
+  input.matmul(weight) + bias
+}
+
+///|
+fn split_heads(
+  input : @tensor.Tensor,
+  n_head : Int,
+  head_dim : Int,
+) -> @tensor.Tensor {
+  let shape = input.shape()
+  let time = shape[shape.length() - 2]
+  let prefix = shape[0:shape.length() - 2].to_owned()
+  prefix.push(time)
+  prefix.push(n_head)
+  prefix.push(head_dim)
+  input.reshape(prefix).swap_axes(-3, -2)
+}
+
+///|
+fn merge_heads(
+  input : @tensor.Tensor,
+  output_shape : Array[Int],
+) -> @tensor.Tensor {
+  input.swap_axes(-3, -2).reshape(output_shape)
+}
+
+///|
+fn MiniGPT::self_attention(
+  self : MiniGPT,
+  input : @tensor.Tensor,
+  layer : Int,
+) -> @tensor.Tensor {
+  let head_dim = self.n_embd / self.n_head
+  let shape = input.shape()
+  let time = shape[shape.length() - 2]
+  let q = split_heads(
+    linear(input, self.wq[layer], self.bq[layer]),
+    self.n_head,
+    head_dim,
+  )
+  let k = split_heads(
+    linear(input, self.wk[layer], self.bk[layer]),
+    self.n_head,
+    head_dim,
+  )
+  let v = split_heads(
+    linear(input, self.wv[layer], self.bv[layer]),
+    self.n_head,
+    head_dim,
+  )
+  let scale = @tensor.Tensor::scalar(1.0 / head_dim.to_double().sqrt())
+  let scores = q.matmul(k.swap_axes(-2, -1)) * scale + causal_mask(time)
+  let weights = scores.softmax(-1)
+  let attended = merge_heads(weights.matmul(v), shape)
+  linear(attended, self.wo[layer], self.bo[layer])
+}
+
+///|
+fn MiniGPT::mlp(
+  self : MiniGPT,
+  input : @tensor.Tensor,
+  layer : Int,
+) -> @tensor.Tensor {
+  let hidden = linear(input, self.w_fc[layer], self.b_fc[layer]).gelu()
+  linear(hidden, self.w_proj[layer], self.b_proj[layer])
+}
+
+///|
+fn MiniGPT::block(
+  self : MiniGPT,
+  input : @tensor.Tensor,
+  layer : Int,
+) -> @tensor.Tensor {
+  let attn_input = input.layer_norm(
+    self.ln1_weight[layer],
+    self.ln1_bias[layer],
+    LAYER_NORM_EPS,
+  )
+  let x = input + self.self_attention(attn_input, layer)
+  let mlp_input = x.layer_norm(
+    self.ln2_weight[layer],
+    self.ln2_bias[layer],
+    LAYER_NORM_EPS,
+  )
+  x + self.mlp(mlp_input, layer)
+}
+
+///|
 pub fn MiniGPT::forward(
   self : MiniGPT,
   input_ids : @tensor.TokenIds,
 ) -> @tensor.Tensor {
-  let embeddings = @nn.embedding(self.token_embedding_table, input_ids)
-  let shape = input_ids.shape()
-  let time = shape[shape.length() - 1]
-  let pos = @nn.embedding(
+  let token_embeddings = @nn.embedding(self.token_embedding_table, input_ids)
+  let position_embeddings = @nn.embedding(
     self.position_embedding_table,
     position_ids(input_ids, self.block_size),
   )
-  let x = embeddings + pos
-  let q = x.matmul(self.wq)
-  let k = x.matmul(self.wk)
-  let v = x.matmul(self.wv)
-  let scale = @tensor.Tensor::scalar(1.0 / self.n_embd.to_double().sqrt())
-  let scores = q.matmul(k.swap_axes(-2, -1)) * scale + causal_mask(time)
-  let weights = scores.softmax(-1)
-  let attended = weights.matmul(v)
-  let hidden = attended.matmul(self.wo) + x
-  hidden.matmul(self.lm_head)
+  let mut hidden = token_embeddings + position_embeddings
+  for layer in 0..<self.n_layer {
+    hidden = self.block(hidden, layer)
+  }
+  hidden = hidden.layer_norm(self.ln_f_weight, self.ln_f_bias, LAYER_NORM_EPS)
+  hidden.matmul(self.token_embedding_table.transpose2d())
 }
 
 ///|
@@ -267,15 +540,31 @@ pub fn MiniGPT::loss(
 
 ///|
 pub fn MiniGPT::parameters(self : MiniGPT) -> Array[@tensor.Tensor] {
-  [
+  let params : Array[@tensor.Tensor] = [
     self.token_embedding_table,
     self.position_embedding_table,
-    self.wq,
-    self.wk,
-    self.wv,
-    self.wo,
-    self.lm_head,
   ]
+  for layer in 0..<self.n_layer {
+    params.push(self.ln1_weight[layer])
+    params.push(self.ln1_bias[layer])
+    params.push(self.wq[layer])
+    params.push(self.bq[layer])
+    params.push(self.wk[layer])
+    params.push(self.bk[layer])
+    params.push(self.wv[layer])
+    params.push(self.bv[layer])
+    params.push(self.wo[layer])
+    params.push(self.bo[layer])
+    params.push(self.ln2_weight[layer])
+    params.push(self.ln2_bias[layer])
+    params.push(self.w_fc[layer])
+    params.push(self.b_fc[layer])
+    params.push(self.w_proj[layer])
+    params.push(self.b_proj[layer])
+  }
+  params.push(self.ln_f_weight)
+  params.push(self.ln_f_bias)
+  params
 }
 
 ///|

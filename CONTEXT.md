@@ -139,10 +139,11 @@ A trainable tensor value whose data may be mutated by an optimizer while normal
 tensor expressions remain immutable.
 _Avoid_: Mutable temporary tensor
 
-**Tiny Transformer Model**:
-The default MiniGPT backend: token and position embeddings, one causal
-self-attention block, and a linear language-model head trained with
-next-token cross entropy.
+**GPT Transformer Model**:
+The default MiniGPT backend: token and position embeddings, stacked pre-norm
+decoder blocks with multi-head causal self-attention, MLP/GELU, residual
+connections, a final layer norm, and a tied embedding language-model head
+trained with next-token cross entropy.
 _Avoid_: Corpus substring lookup or side-channel sampler
 
 **Gradient Checker**:

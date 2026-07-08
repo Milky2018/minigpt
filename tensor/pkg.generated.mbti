@@ -37,7 +37,9 @@ pub fn Tensor::div(Self, Self) -> Self
 pub fn Tensor::exp(Self) -> Self
 pub fn Tensor::from_array(Array[Double], Array[Int]) -> Self
 pub fn Tensor::gather_rows(Self, TokenIds) -> Self
+pub fn Tensor::gelu(Self) -> Self
 pub fn Tensor::grad(Self) -> Self?
+pub fn Tensor::layer_norm(Self, Self, Self, Double) -> Self
 pub fn Tensor::log(Self) -> Self
 pub fn Tensor::matmul(Self, Self) -> Self
 pub fn Tensor::mean(Self) -> Self
