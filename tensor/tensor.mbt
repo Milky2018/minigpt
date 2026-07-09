@@ -85,7 +85,7 @@ pub fn Tensor::backward(self : Tensor) -> Unit {
   }
   match (self.context, self.node_ref) {
     (Some(ctx), Some(node_ref)) => {
-      ctx.zero_grad()
+      ctx.clear_tape_grads()
       ctx.add_grad(node_ref, [1.0])
       if ctx.state.val.tape.length() == 0 {
         return

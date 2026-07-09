@@ -8,6 +8,9 @@ pub fn Tensor::assign_parameter_data(
       if data.length() != shape_size(ctx.state.val.params[id].shape) {
         abort("assign_parameter_data requires the same number of elements")
       }
+      if ctx.state.val.tape.length() != 0 {
+        abort("assign_parameter_data requires no live autograd tape")
+      }
       for i in 0..<data.length() {
         self.data[i] = data[i]
       }

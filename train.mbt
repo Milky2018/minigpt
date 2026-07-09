@@ -503,9 +503,10 @@ fn train_token_ids_internal(
     let loss = model.loss_train(inputs, targets, rng)
     let loss_value = loss.data()[0]
     losses.push(loss_value)
+    model.zero_grad()
     loss.backward()
-    optimizer.step_with_grad_clip(config.grad_clip)
     model.clear_graph()
+    optimizer.step_with_grad_clip(config.grad_clip)
     if iter_num % config.log_interval == 0 {
       (callbacks.on_log)({ iter_num, loss: loss_value, learning_rate: lr })
     }

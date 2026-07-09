@@ -88,20 +88,22 @@ fn AutogradContext::add_grad(
 }
 
 ///|
-pub fn AutogradContext::zero_grad(self : AutogradContext) -> Unit {
-  for i in 0..<self.state.val.params.length() {
-    self.state.val.params[i].grad = None
-  }
+fn AutogradContext::clear_tape_grads(self : AutogradContext) -> Unit {
   for i in 0..<self.state.val.tape.length() {
     self.state.val.tape[i].grad = None
   }
 }
 
 ///|
-pub fn AutogradContext::clear_graph(self : AutogradContext) -> Unit {
+pub fn AutogradContext::zero_grad(self : AutogradContext) -> Unit {
   for i in 0..<self.state.val.params.length() {
     self.state.val.params[i].grad = None
   }
+  self.clear_tape_grads()
+}
+
+///|
+pub fn AutogradContext::clear_graph(self : AutogradContext) -> Unit {
   self.state.val.tape = []
   self.state.val.tape_epoch += 1
 }

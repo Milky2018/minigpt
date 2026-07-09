@@ -82,6 +82,25 @@ test "reshape preserves values and propagates gradients" {
 }
 
 ///|
+test "backward accumulates parameter gradients until zero_grad" {
+  let ctx = AutogradContext()
+  let x = Tensor::parameter(ctx, [2.0], [1])
+  let loss = (x * Tensor::scalar(3.0)).sum()
+  loss.backward()
+  loss.backward()
+  match x.grad() {
+    Some(g) => assert_array_close(g.data(), [6.0])
+    None => abort("expected accumulated gradient")
+  }
+  ctx.zero_grad()
+  loss.backward()
+  match x.grad() {
+    Some(g) => assert_array_close(g.data(), [3.0])
+    None => abort("expected gradient after zero_grad")
+  }
+}
+
+///|
 test "clear graph preserves parameter node ids" {
   let ctx = AutogradContext()
   let x = Tensor::parameter(ctx, [2.0], [1])
@@ -93,6 +112,20 @@ test "clear graph preserves parameter node ids" {
     Some(g) => assert_array_close(g.data(), [2.0])
     None => abort("expected y gradient")
   }
+}
+
+///|
+test "clear graph preserves parameter gradients" {
+  let ctx = AutogradContext()
+  let x = Tensor::parameter(ctx, [2.0], [1])
+  (x * Tensor::scalar(2.0)).sum().backward()
+  ctx.clear_graph()
+  match x.grad() {
+    Some(g) => assert_array_close(g.data(), [2.0])
+    None => abort("expected preserved parameter gradient")
+  }
+  x.assign_parameter_data([3.0])
+  assert_array_close(x.data(), [3.0])
 }
 
 ///|
@@ -109,6 +142,7 @@ test "clear graph drops the temporary tape" {
     @test.assert_eq(ctx.state.val.tape_epoch, epoch + 1)
     @test.assert_eq(ctx.state.val.params.length(), 1)
   }
+  ctx.zero_grad()
   (x * Tensor::scalar(3.0)).sum().backward()
   match x.grad() {
     Some(g) => assert_array_close(g.data(), [3.0])

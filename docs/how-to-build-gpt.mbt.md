@@ -210,9 +210,11 @@ test "optimizer: sgd step" {
   let x = @tensor.Tensor::from_array([2.0], [1, 1])
   // y = x·w = 2, loss = y² = 4
   let loss = x.matmul(w) * x.matmul(w)
+  ctx.zero_grad()
   loss.backward()
   // w 的梯度 = 2*y*x = 2*2*2 = 8
   // SGD: w -= lr * grad = 1.0 - 0.1*8 = 0.2
+  ctx.clear_graph()
   @optim.sgd_step([w], 0.1)
   assert_true(
     (w.data()[0] - 0.2).abs() < 1.0e-10,
@@ -229,8 +231,10 @@ test "optimizer: adamw basic step" {
   let w = @tensor.Tensor::parameter(ctx, [1.0], [1, 1])
   let x = @tensor.Tensor::from_array([2.0], [1, 1])
   let loss = x.matmul(w) * x.matmul(w)
+  ctx.zero_grad()
   loss.backward()
   let adamw = @optim.AdamW([w], AdamWConfig(0.01))
+  ctx.clear_graph()
   adamw.step()
   // 经过一步 AdamW 后，参数应发生变化
   assert_true(w.data()[0] != 1.0)
@@ -806,6 +810,11 @@ fn GPT::parameter_weight_decays(
 fn GPT::clear_graph(self : GPT) -> Unit {
   self.ctx.clear_graph()
 }
+
+///|
+fn GPT::zero_grad(self : GPT) -> Unit {
+  self.ctx.zero_grad()
+}
 ```
 
 ---
@@ -1061,9 +1070,10 @@ test "e2e: train a tiny GPT and generate text" {
     let (inputs, targets) = sample_batch(train_ids, batch_size, block_size, rng)
     let loss = model.loss_train(inputs, targets, rng)
     final_train_loss = loss.data()[0]
+    model.zero_grad()
     loss.backward()
-    optimizer.step_with_grad_clip(1.0)
     model.clear_graph()
+    optimizer.step_with_grad_clip(1.0)
   }
   assert_true(final_train_loss > 0.0, msg="training loss should be positive")
 

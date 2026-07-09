@@ -814,3 +814,8 @@ fn MiniGPT::parameter_weight_decays(
 fn MiniGPT::clear_graph(self : MiniGPT) -> Unit {
   self.ctx.clear_graph()
 }
+
+///|
+fn MiniGPT::zero_grad(self : MiniGPT) -> Unit {
+  self.ctx.zero_grad()
+}
