@@ -1,5 +1,8 @@
 ///|
-const CHECKPOINT_VERSION : Int = 8
+const CHECKPOINT_VERSION : Int = 9
+
+///|
+const LEGACY_CHAR_CHECKPOINT_VERSION : Int = 8
 
 ///|
 const CHECKPOINT_MAGIC : Int = 1296649799
@@ -9,7 +12,7 @@ priv struct MiniGPTCheckpoint {
   version : Int
   model_kind : String?
   tokenizer_kind : String?
-  vocabulary : Array[Char]
+  vocabulary : Array[String]
   n_embd : Int
   n_head : Int
   n_layer : Int
@@ -24,7 +27,7 @@ priv struct MiniGPTCheckpoint {
 ///|
 fn MiniGPTCheckpoint::from_model(
   model : MiniGPT,
-  tokenizer : CharTokenizer,
+  tokenizer : Tokenizer,
 ) -> MiniGPTCheckpoint {
   {
     version: CHECKPOINT_VERSION,
@@ -46,17 +49,22 @@ fn MiniGPTCheckpoint::from_model(
 ///|
 fn MiniGPTCheckpoint::to_model_and_tokenizer(
   self : MiniGPTCheckpoint,
-) -> (MiniGPT, CharTokenizer) {
-  if self.version != CHECKPOINT_VERSION {
+) -> (MiniGPT, Tokenizer) {
+  if self.version != CHECKPOINT_VERSION &&
+    self.version != LEGACY_CHAR_CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
   if self.model_kind != Some("gpt-transformer") {
     abort("unsupported MiniGPT checkpoint model kind")
   }
-  if self.tokenizer_kind != Some(TOKENIZER_KIND_CHAR) {
-    abort("unsupported MiniGPT checkpoint tokenizer kind")
+  let tokenizer_kind = match self.tokenizer_kind {
+    Some(kind) => kind
+    None => abort("missing MiniGPT checkpoint tokenizer kind")
   }
-  let tokenizer = CharTokenizer::from_chars(self.vocabulary)
+  let tokenizer = Tokenizer::from_kind_and_vocabulary(
+    tokenizer_kind,
+    self.vocabulary,
+  )
   let model = MiniGPT::from_parameter_data(
     tokenizer.vocab_size(),
     self.n_embd,
@@ -69,7 +77,7 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
 }
 
 ///|
-pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
+pub fn encode_checkpoint(model : MiniGPT, tokenizer : Tokenizer) -> Bytes {
   let checkpoint = MiniGPTCheckpoint::from_model(model, tokenizer)
   encode_checkpoint_data(checkpoint)
 }
@@ -77,7 +85,7 @@ pub fn encode_checkpoint(model : MiniGPT, tokenizer : CharTokenizer) -> Bytes {
 ///|
 pub fn encode_training_checkpoint(
   model : MiniGPT,
-  tokenizer : CharTokenizer,
+  tokenizer : Tokenizer,
   optimizer : @optim.AdamW,
   iter_num : Int,
   best_val_loss : Double,
@@ -102,8 +110,8 @@ fn encode_checkpoint_data(checkpoint : MiniGPTCheckpoint) -> Bytes {
   write_string(buffer, checkpoint.model_kind.unwrap())
   write_string(buffer, checkpoint.tokenizer_kind.unwrap())
   buffer.write_int_le(checkpoint.vocabulary.length())
-  for ch in checkpoint.vocabulary {
-    write_string(buffer, ch.to_string())
+  for token in checkpoint.vocabulary {
+    write_string(buffer, token)
   }
   buffer.write_int_le(checkpoint.n_embd)
   buffer.write_int_le(checkpoint.n_head)
@@ -144,22 +152,22 @@ fn encode_checkpoint_data(checkpoint : MiniGPTCheckpoint) -> Bytes {
 }
 
 ///|
-pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, CharTokenizer) {
+pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, Tokenizer) {
   let reader = BytesReader::new(bytes)
   let magic = reader.read_int_le()
   if magic != CHECKPOINT_MAGIC {
     abort("invalid MiniGPT checkpoint magic")
   }
   let version = reader.read_int_le()
-  if version != CHECKPOINT_VERSION {
+  if version != CHECKPOINT_VERSION && version != LEGACY_CHAR_CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
   let model_kind = reader.read_string()
   let tokenizer_kind = reader.read_string()
   let vocab_size = reader.read_int_le()
-  let vocabulary : Array[Char] = []
+  let vocabulary : Array[String] = []
   for _ in 0..<vocab_size {
-    vocabulary.push(single_char(reader.read_string()))
+    vocabulary.push(reader.read_string())
   }
   let n_embd = reader.read_int_le()
   let n_head = reader.read_int_le()
@@ -259,18 +267,6 @@ fn write_adamw_checkpoint(
 fn write_string(buffer : Buffer, text : String) -> Unit {
   let bytes = @utf8.encode(text[:])
   write_bytes(buffer, bytes)
-}
-
-///|
-fn single_char(text : String) -> Char {
-  let chars : Array[Char] = []
-  for ch in text {
-    chars.push(ch)
-  }
-  if chars.length() != 1 {
-    abort("invalid checkpoint character")
-  }
-  chars[0]
 }
 
 ///|

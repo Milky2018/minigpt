@@ -24,9 +24,24 @@ val tokens = 111,540
 split = first 90% train, last 10% val
 ```
 
+第二个教学目标是很小的英文菜谱语料：
+
+```bash
+data/recipe_demo.txt
+```
+
+这个文件来自 `habakan/moonbit-gpt-edge-demo` 的 Cooklang-style recipe
+sentences，来源和许可证记录在 `data/RECIPE_DEMO_SOURCE.md`。它只有几十行，
+适合课堂里快速演示“模型如何从短语料中学会菜谱风格补全”，不适合作为模型质量
+benchmark。
+
+菜谱语料可以直接训练。默认 tokenizer 仍然是 `char`，用于对齐 nanoGPT；
+菜谱演示建议显式使用 `--tokenizer word`，让模型一次预测一个英文词，更容易在
+小语料上快速看到整词补全效果。
+
 ## 训练
 
-训练会从语料中构造字符级 tokenizer，并按 nanoGPT 的 `always_save_checkpoint = False` 行为在 eval 时保存验证集 loss 创新低的 checkpoint。默认输出文件是 `minigpt-model.bin`：
+训练会从语料中构造 tokenizer（默认字符级），并按 nanoGPT 的 `always_save_checkpoint = False` 行为在 eval 时保存验证集 loss 创新低的 checkpoint。默认输出文件是 `minigpt-model.bin`：
 
 ```bash
 moon run --release cmd/main -- train
@@ -42,6 +57,7 @@ moon run --release cmd/main -- train --out minigpt-model.bin --steps 5000
 
 ```text
 --data                    UTF-8 语料路径，默认 data/tiny_shakespeare.txt
+--tokenizer               tokenizer 类型：char 或 word，默认 char
 --out                     checkpoint 输出路径，默认 minigpt-model.bin
 --steps                   训练迭代数，默认 5000
 --batch-size              batch size，默认 64
@@ -77,6 +93,30 @@ moon run --release cmd/main -- train \
 moon run --release cmd/main -- generate \
   --model /tmp/minigpt-small.bin \
   --prompt ROMEO: \
+  --max-new-tokens 8
+```
+
+菜谱语料的快速训练示例：
+
+```bash
+moon run --release cmd/main -- train \
+  --data data/recipe_demo.txt \
+  --tokenizer word \
+  --out /tmp/minigpt-recipe.bin \
+  --steps 20 \
+  --batch-size 4 \
+  --block-size 16 \
+  --n-embd 32 \
+  --n-head 4 \
+  --n-layer 1 \
+  --eval-interval 5 \
+  --eval-iters 2 \
+  --log-interval 1 \
+  --always-save-checkpoint true
+
+moon run --release cmd/main -- generate \
+  --model /tmp/minigpt-recipe.bin \
+  --prompt "heat" \
   --max-new-tokens 8
 ```
 
@@ -131,7 +171,9 @@ ROMEO:The
 --temperature     采样温度，默认 0.8
 ```
 
-字符级 tokenizer 只能编码训练语料词表里的 65 个字符。默认 Shakespeare 语料不包含中文字符，所以中文 prompt 会被拒绝。
+checkpoint 会保存训练时使用的 tokenizer。字符级 checkpoint 只能编码训练语料
+词表里的字符；word-level checkpoint 只能编码训练语料词表里的词。默认
+Shakespeare 语料不包含中文字符，所以中文 prompt 会被拒绝。
 
 ## Checkpoint 大小
 
@@ -152,7 +194,7 @@ training checkpoint ~= 250MB
 ## 项目结构
 
 ```text
-tokenizer.mbt       character tokenizer and train/val split
+tokenizer.mbt       char/word tokenizer and train/val split
 tensor/             Tensor 和自动微分基础
 nn/                 神经网络基础算子
 optim/              AdamW 优化器

@@ -182,7 +182,7 @@ pub fn generate_token_ids_with_sampling_options(
 ///|
 pub fn generate_text(
   model : MiniGPT,
-  tokenizer : CharTokenizer,
+  tokenizer : Tokenizer,
   prompt : String,
   max_new_tokens : Int,
   rng : @random.Rand,

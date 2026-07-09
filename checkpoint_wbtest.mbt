@@ -10,9 +10,11 @@ test "checkpoint roundtrips tokenizer and model weights" {
     4,
     rng,
   )
-  let bytes = encode_checkpoint(model, tokenizer)
+  let packed = Tokenizer::from_char(tokenizer)
+  let bytes = encode_checkpoint(model, packed)
   let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
-  @test.assert_eq(loaded_tokenizer.vocabulary(), tokenizer.vocabulary())
+  @test.assert_eq(loaded_tokenizer.kind_name(), "char")
+  @test.assert_eq(loaded_tokenizer.vocabulary(), packed.vocabulary())
   @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
   @test.assert_eq(loaded_model.n_embd(), model.n_embd())
   @test.assert_eq(loaded_model.n_head(), model.n_head())
@@ -59,16 +61,43 @@ test "training checkpoint decodes model and tokenizer" {
     rng,
   )
   let optimizer = @optim.AdamW::new(model.parameters(), 0.001)
+  let packed = Tokenizer::from_char(tokenizer)
   let bytes = encode_training_checkpoint(
     model,
-    tokenizer,
+    packed,
     optimizer,
     250,
     1.23,
     TrainingConfig::new(1, 2, 3, 0.001, eval_iters=1),
   )
   let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
-  @test.assert_eq(loaded_tokenizer.vocabulary(), tokenizer.vocabulary())
+  @test.assert_eq(loaded_tokenizer.kind_name(), "char")
+  @test.assert_eq(loaded_tokenizer.vocabulary(), packed.vocabulary())
   @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
   @test.assert_eq(loaded_model.block_size(), model.block_size())
+}
+
+///|
+test "checkpoint roundtrips word tokenizer" {
+  let rng = @random.Rand::new()
+  let (word_tokenizer, _) = WordTokenizer::train(
+    "heat olive oil\nheat butter\n",
+  )
+  let tokenizer = Tokenizer::from_word(word_tokenizer)
+  let model = MiniGPT::new_gpt_with_options(
+    tokenizer.vocab_size(),
+    8,
+    2,
+    1,
+    4,
+    rng,
+  )
+  let bytes = encode_checkpoint(model, tokenizer)
+  let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
+  @test.assert_eq(loaded_tokenizer.kind_name(), "word")
+  @test.assert_eq(loaded_tokenizer.vocabulary(), [
+    "\n", "oil", "heat", "olive", "butter",
+  ])
+  @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
+  @test.assert_eq(loaded_tokenizer.decode([2, 3, 1]), "heat olive oil")
 }

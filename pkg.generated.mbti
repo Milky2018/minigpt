@@ -39,17 +39,21 @@ pub const N_HEAD : Int = 6
 
 pub const N_LAYER : Int = 6
 
+pub const TOKENIZER_KIND_CHAR : String = "char"
+
+pub const TOKENIZER_KIND_WORD : String = "word"
+
 pub const TRAINING_STEPS : Int = 5000
 
 pub const WARMUP_ITERS : Int = 100
 
 pub const WEIGHT_DECAY : Double = 1.0e-1
 
-pub fn decode_checkpoint(Bytes) -> (MiniGPT, CharTokenizer)
+pub fn decode_checkpoint(Bytes) -> (MiniGPT, Tokenizer)
 
-pub fn encode_checkpoint(MiniGPT, CharTokenizer) -> Bytes
+pub fn encode_checkpoint(MiniGPT, Tokenizer) -> Bytes
 
-pub fn encode_training_checkpoint(MiniGPT, CharTokenizer, @optim.AdamW, Int, Double, TrainingConfig) -> Bytes
+pub fn encode_training_checkpoint(MiniGPT, Tokenizer, @optim.AdamW, Int, Double, TrainingConfig) -> Bytes
 
 pub fn generate_next_token_id_from_context(MiniGPT, Array[Int], @random.Rand, Int, Int?) -> Int
 
@@ -57,13 +61,15 @@ pub fn generate_next_token_id_from_context_with_options(MiniGPT, Array[Int], @ra
 
 pub fn generate_next_token_id_from_context_with_sampling_options(MiniGPT, Array[Int], @random.Rand, Int, Double, Int?, Array[Int]?) -> Int
 
-pub fn generate_text(MiniGPT, CharTokenizer, String, Int, @random.Rand) -> String raise TokenizerError
+pub fn generate_text(MiniGPT, Tokenizer, String, Int, @random.Rand) -> String raise TokenizerError
 
 pub fn generate_token_ids(MiniGPT, Array[Int], Int, @random.Rand) -> Array[Int]
 
 pub fn generate_token_ids_with_sampling_options(MiniGPT, Array[Int], Int, @random.Rand, Array[Int]?) -> Array[Int]
 
 pub fn prepare_shakespeare_char_dataset(String) -> ShakespeareCharDataset
+
+pub fn prepare_token_dataset(String, String) -> TokenDataset
 
 pub fn sample_batch(Array[Int], Int, Int, @random.Rand) -> (@tensor.TokenIds, @tensor.TokenIds)
 
@@ -74,6 +80,7 @@ pub fn train_token_ids_with_checkpoint_callback(MiniGPT, Array[Int], Array[Int],
 // Errors
 pub(all) suberror TokenizerError {
   UnknownCharacter(Char)
+  UnknownToken(String)
   InvalidTokenId(Int)
 } derive(Eq, @debug.Debug)
 
@@ -144,6 +151,25 @@ pub struct ShakespeareCharDataset {
   val_ids : Array[Int]
 }
 
+pub struct TokenDataset {
+  tokenizer : Tokenizer
+  train_ids : Array[Int]
+  val_ids : Array[Int]
+}
+
+pub(all) enum Tokenizer {
+  Character(CharTokenizer)
+  Word(WordTokenizer)
+}
+pub fn Tokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn Tokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn Tokenizer::from_char(CharTokenizer) -> Self
+pub fn Tokenizer::from_kind_and_vocabulary(String, Array[String]) -> Self
+pub fn Tokenizer::from_word(WordTokenizer) -> Self
+pub fn Tokenizer::kind_name(Self) -> String
+pub fn Tokenizer::vocab_size(Self) -> Int
+pub fn Tokenizer::vocabulary(Self) -> Array[String]
+
 pub struct TrainingConfig {
   batch_size : Int
   block_size : Int
@@ -171,6 +197,17 @@ pub struct TrainingStats {
   best_val_loss : Double
   saved_checkpoints : Int
 }
+
+pub struct WordTokenizer {
+  // private fields
+}
+pub fn WordTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn WordTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn WordTokenizer::from_tokens(Array[String]) -> Self
+pub fn WordTokenizer::kind_name(Self) -> String
+pub fn WordTokenizer::train(String) -> (Self, Array[Int])
+pub fn WordTokenizer::vocab_size(Self) -> Int
+pub fn WordTokenizer::vocabulary(Self) -> Array[String]
 
 // Type aliases
 

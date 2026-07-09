@@ -2,6 +2,9 @@
 const DEFAULT_DATA_PATH : String = "data/tiny_shakespeare.txt"
 
 ///|
+const DEFAULT_TOKENIZER_KIND : String = "char"
+
+///|
 const DEFAULT_PROMPT : String = "ROMEO:"
 
 ///|
@@ -38,6 +41,12 @@ fn training_options() -> Array[@argparse.OptionArg] {
     OptionArg("data", long="data", about="UTF-8 training corpus path", default_values=[
       DEFAULT_DATA_PATH,
     ]),
+    OptionArg(
+      "tokenizer",
+      long="tokenizer",
+      about="tokenizer kind: char or word",
+      default_values=[DEFAULT_TOKENIZER_KIND],
+    ),
     OptionArg("out", long="out", about="model checkpoint output path", default_values=[
       DEFAULT_MODEL_PATH,
     ]),
@@ -162,11 +171,23 @@ fn training_config(matches : @argparse.Matches) -> @minigpt.TrainingConfig {
 }
 
 ///|
-fn load_dataset(path : String) -> @minigpt.ShakespeareCharDataset {
+fn parse_tokenizer_kind(matches : @argparse.Matches) -> String {
+  match value(matches, "tokenizer") {
+    "char" => "char"
+    "word" => "word"
+    other => abort("unsupported tokenizer kind: \{other}")
+  }
+}
+
+///|
+fn load_dataset(
+  path : String,
+  tokenizer_kind : String,
+) -> @minigpt.TokenDataset {
   let text = @fs.read_file_to_string(path, encoding="utf8") catch {
     _ => abort("failed to read corpus '\{path}'")
   }
-  @minigpt.prepare_shakespeare_char_dataset(text)
+  @minigpt.prepare_token_dataset(text, tokenizer_kind)
 }
 
 ///|
@@ -186,7 +207,7 @@ fn print_loss_summary(stats : @minigpt.TrainingStats) -> Unit {
 ///|
 fn print_completion_trace(
   model : @minigpt.MiniGPT,
-  tokenizer : @minigpt.CharTokenizer,
+  tokenizer : @minigpt.Tokenizer,
   prompt : String,
   max_new_tokens : Int,
   top_k : Int,
@@ -196,6 +217,8 @@ fn print_completion_trace(
   let token_ids = tokenizer.encode(prompt) catch {
     UnknownCharacter(ch) =>
       abort("prompt contains character outside tokenizer vocabulary: \{ch}")
+    UnknownToken(token) =>
+      abort("prompt contains token outside tokenizer vocabulary: \{token}")
     InvalidTokenId(_) =>
       abort("unexpected token id error while encoding prompt")
   }
@@ -222,13 +245,14 @@ fn print_completion_trace(
 ///|
 fn run_train(matches : @argparse.Matches) -> Unit {
   let data_path = value(matches, "data")
+  let tokenizer_kind = parse_tokenizer_kind(matches)
   let out_path = value(matches, "out")
   let config = training_config(matches)
   let n_embd = int_value(matches, "n-embd")
   let n_head = int_value(matches, "n-head")
   let n_layer = int_value(matches, "n-layer")
   let rng = @random.Rand::new()
-  let dataset = load_dataset(data_path)
+  let dataset = load_dataset(data_path, tokenizer_kind)
   println("command: train")
   println("data: \{data_path}")
   println("tokenizer: \{dataset.tokenizer.kind_name()}")
