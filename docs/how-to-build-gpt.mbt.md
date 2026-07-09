@@ -254,11 +254,25 @@ let layer_norm_eps : Double = 1.0e-5
 ///|
 /// GPT 模型
 struct GPT {
+  // AutogradContext 是这组可训练参数共享的计算图上下文。
+  // 只要参数来自同一个 ctx，反向传播时梯度就能沿着同一张图累积。
   ctx : @tensor.AutogradContext
+
+  // 两张 embedding table 把离散的 token/position 变成 n_embd 维向量。
+  // token_embedding_table 后面还会被复用为输出层权重，也就是 tied embedding。
   token_embedding_table : @tensor.Tensor
   position_embedding_table : @tensor.Tensor
+
+  // 下面这些 Array[@tensor.Tensor] 都是“每一层一份参数”。
+  // 数组长度是 n_layer，第 i 个元素就是第 i 个 Transformer block 的参数。
+
+  // 第一次 LayerNorm：进入 self-attention 前先归一化 hidden states。
   ln1_weight : Array[@tensor.Tensor]
   ln1_bias : Array[@tensor.Tensor]
+
+  // Self-attention 的四组线性层参数：
+  // wq/wk/wv 把 hidden states 投影成 Query/Key/Value；
+  // wo 把多头 attention 的结果投影回 n_embd 维。
   wq : Array[@tensor.Tensor]
   bq : Array[@tensor.Tensor]
   wk : Array[@tensor.Tensor]
@@ -267,14 +281,24 @@ struct GPT {
   bv : Array[@tensor.Tensor]
   wo : Array[@tensor.Tensor]
   bo : Array[@tensor.Tensor]
+
+  // 第二次 LayerNorm：进入 MLP 前先归一化。
   ln2_weight : Array[@tensor.Tensor]
   ln2_bias : Array[@tensor.Tensor]
+
+  // MLP 两层线性变换：
+  // w_fc 先把 n_embd 扩大到 n_embd * mlp_multiplier；
+  // w_proj 再投影回 n_embd，方便和残差相加。
   w_fc : Array[@tensor.Tensor]
   b_fc : Array[@tensor.Tensor]
   w_proj : Array[@tensor.Tensor]
   b_proj : Array[@tensor.Tensor]
+
+  // 所有 Transformer block 之后的最终 LayerNorm。
   ln_f_weight : @tensor.Tensor
   ln_f_bias : @tensor.Tensor
+
+  // 这些 Int 不是参数，只是描述模型形状和约束的元数据。
   vocab_size : Int
   n_embd : Int
   n_head : Int
@@ -284,6 +308,8 @@ struct GPT {
 ```
 
 模型结构说明：
+
+这整个 `struct GPT` 可以理解成一个“模型权重盒子”。`Tensor` 字段是真正会参与前向计算、反向传播和优化器更新的参数；`Int` 字段只是记录这些参数的形状。字段名里带数组的参数都是按层存储的：`wq[layer]`、`ln1_weight[layer]` 这样的写法会取出某一个 Transformer block 对应的权重。
 
 | 字段 | shape | 作用 |
 |------|-------|------|
