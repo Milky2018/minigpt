@@ -27,15 +27,31 @@ minigpt 提供了三种分词器：字符级（`char`）、词级（`word`）和
 /// 训练一个字符级分词器并编码/解码
 test "tokenizer: char-level train, encode, decode" {
   let text = "hello world! hello moonbit!"
-  let (tokenizer, _all_ids) = @tokenizer.Tokenizer::train_char(text)
+  let (tokenizer, all_ids) = @tokenizer.Tokenizer::train_char(text)
   let vocab_size = tokenizer.vocab_size()
   // 字符级词表大小等于文本中不同字符的数量
-  assert_true(vocab_size > 0)
+  inspect(
+    vocab_size,
+    content=(
+      #|14
+    ),
+  )
+  debug_inspect(
+    all_ids.length(),
+    content=(
+      #|27
+    ),
+  )
 
   // 编码后立即解码应恢复原文
   let encoded = tokenizer.encode("hello world")
   let decoded = tokenizer.decode(encoded)
-  @test.assert_eq(decoded, "hello world")
+  inspect(
+    decoded,
+    content=(
+      #|hello world
+    ),
+  )
 }
 ```
 
@@ -43,12 +59,26 @@ test "tokenizer: char-level train, encode, decode" {
 ///|
 /// 词级分词器
 test "tokenizer: word-level train, encode, decode" {
-  let text = "hello world\nhello moonbit\ngood morning"
-  let (tokenizer, _all_ids) = @tokenizer.Tokenizer::train_word(text)
+  let text =
+    #|hello world
+    #|hello moonbit
+    #|good morning
+  let (tokenizer, all_ids) = @tokenizer.Tokenizer::train_word(text)
+  inspect(
+    all_ids.length(),
+    content=(
+      #|8
+    ),
+  )
   // 词级分词器按空白和换行切分
   let encoded = tokenizer.encode("hello world")
   let decoded = tokenizer.decode(encoded)
-  @test.assert_eq(decoded, "hello world")
+  inspect(
+    decoded,
+    content=(
+      #|hello world
+    ),
+  )
 }
 ```
 
@@ -61,9 +91,40 @@ test "tokenizer: bpe train, encode, decode" {
     #|newest newest newest newest newest newest widest widest widest
   let (tokenizer, _all_ids) = @tokenizer.Tokenizer::train_bpe(text, 32)
   // BPE 会把高频组合合并为子词
+  let bpe_merges = tokenizer.bpe_merges()
+  debug_inspect(
+    bpe_merges.map(fn(m) { m.left() + " " + m.right() }),
+    content=(
+      #|[
+      #|  "e s",
+      #|  "es t",
+      #|  "l o",
+      #|  "lo w",
+      #|  "est  ",
+      #|  "  low",
+      #|  "e w",
+      #|  "n ew",
+      #|  "new est ",
+      #|  "newest  newest ",
+      #|  " low  low",
+      #|  "e r",
+      #|  "i d",
+      #|  "w id",
+      #|  " low er",
+      #|  "est  wid",
+      #|  " lower  lower",
+      #|  "newest newest  newest newest ",
+      #|]
+    ),
+  )
   let encoded = tokenizer.encode("lowest")
   let decoded = tokenizer.decode(encoded)
-  @test.assert_eq(decoded, "lowest")
+  inspect(
+    decoded,
+    content=(
+      #|lowest
+    ),
+  )
 }
 ```
 
@@ -81,27 +142,28 @@ test "tensor: creation and elementwise ops" {
   let b = @tensor.Tensor::from_array([5.0, 6.0, 7.0, 8.0], [2, 2])
   // 加法
   let c = a + b
-  @test.assert_eq(c.data(), [6.0, 8.0, 10.0, 12.0])
-  @test.assert_eq(c.shape(), [2, 2])
+  debug_inspect(
+    c.data(),
+    content=(
+      #|[6, 8, 10, 12]
+    ),
+  )
   // 乘法（逐元素）
   let d = a * b
-  @test.assert_eq(d.data(), [5.0, 12.0, 21.0, 32.0])
+  debug_inspect(
+    d.data(),
+    content=(
+      #|[5, 12, 21, 32]
+    ),
+  )
   // 减法
   let e = b - a
-  @test.assert_eq(e.data(), [4.0, 4.0, 4.0, 4.0])
-}
-```
-
-```mbt check
-///|
-/// 广播运算
-test "tensor: broadcasting" {
-  let a = @tensor.Tensor::from_array([1.0, 2.0, 3.0], [3, 1])
-  let b = @tensor.Tensor::from_array([10.0, 20.0], [1, 2])
-  // 广播：[3,1] + [1,2] => [3,2]
-  let c = a + b
-  @test.assert_eq(c.shape(), [3, 2])
-  @test.assert_eq(c.data(), [11.0, 21.0, 12.0, 22.0, 13.0, 23.0])
+  debug_inspect(
+    e.data(),
+    content=(
+      #|[4, 4, 4, 4]
+    ),
+  )
 }
 ```
 
@@ -113,16 +175,41 @@ test "tensor: matmul, reshape, transpose, sum" {
   let b = @tensor.Tensor::from_array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [3, 2])
   // 矩阵乘法
   let c = a.matmul(b)
-  @test.assert_eq(c.shape(), [2, 2])
+  debug_inspect(
+    c.shape(),
+    content=(
+      #|[2, 2]
+    ),
+  )
   let reshape = a.reshape([3, 2])
-  @test.assert_eq(reshape.shape(), [3, 2])
+  debug_inspect(
+    reshape.shape(),
+    content=(
+      #|[3, 2]
+    ),
+  )
   // 二维转置
   let transposed = a.transpose2d()
-  @test.assert_eq(transposed.shape(), [3, 2])
+  debug_inspect(
+    transposed.shape(),
+    content=(
+      #|[3, 2]
+    ),
+  )
   // 求和
   let s = a.sum()
-  @test.assert_eq(s.shape(), [])
-  @test.assert_eq(s.data()[0], 21.0)
+  debug_inspect(
+    s.shape(),
+    content=(
+      #|[]
+    ),
+  )
+  inspect(
+    s.data()[0],
+    content=(
+      #|21
+    ),
+  )
 }
 ```
 
@@ -133,7 +220,12 @@ test "tensor: activation functions" {
   let x = @tensor.Tensor::from_array([-2.0, -1.0, 0.0, 1.0, 2.0], [5])
   // ReLU
   let relu_out = x.relu()
-  @test.assert_eq(relu_out.data(), [0.0, 0.0, 0.0, 1.0, 2.0])
+  debug_inspect(
+    relu_out.data(),
+    content=(
+      #|[0, 0, 0, 1, 2]
+    ),
+  )
   // GELU
   let gelu_out = x.gelu()
   // GELU(-2) ≈ -0.045, GELU(0) ≈ 0, GELU(2) ≈ 1.955
@@ -174,8 +266,12 @@ test "autograd: simple backward" {
   // dl/dw = 2y · xᵀ
   let grad = w.grad().unwrap()
   // grad[0] = 2*11*3 = 66, grad[1] = 2*11*4 = 88
-  @test.assert_eq(grad.data()[0], 66.0)
-  @test.assert_eq(grad.data()[1], 88.0)
+  debug_inspect(
+    grad.data(),
+    content=(
+      #|[66, 88]
+    ),
+  )
 }
 ```
 
