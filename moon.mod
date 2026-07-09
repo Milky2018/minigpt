@@ -15,16 +15,20 @@ version = "0.1.0"
 
 readme = "README.mbt.md"
 
-repository = ""
+repository = "https://github.com/Milky2018/minigpt"
 
 license = "Apache-2.0"
 
-keywords = [ ]
+keywords = [ "gpt", "transformer", "tensor", "autodiff", "training" ]
 
 preferred_target = "native"
 
-description = ""
+description = "A small MoonBit GPT training toolkit with tensor autodiff, tokenizer support, checkpoints, and a teaching CLI."
 
 import {
   "moonbitlang/x@0.4.46",
 }
+
+options(
+  exclude: [ "AGENTS.md", "CONTEXT.md", "cmd/smoke", "data", "docs", "tools" ],
+)

@@ -6,7 +6,11 @@
 
 ## 数据
 
-默认语料文件：
+本仓库自带两份教学语料，方便从源码 checkout 后直接跑 demo。发布到
+Mooncakes 的包会排除 `data/` 和 `docs/`；作为依赖使用时，请准备自己的 UTF-8
+文本文件，并通过 `--data` 传给训练命令。
+
+源码仓库里的默认语料文件：
 
 ```bash
 data/tiny_shakespeare.txt
@@ -121,6 +125,36 @@ moon run --release cmd/main -- generate \
   --max-new-tokens 8
 ```
 
+作为库使用时，推荐从根包入口开始，不需要直接操作 `tensor/` 或 `nn/`：
+
+```mbt nocheck
+///|
+let rng = @random.Rand::new()
+
+///|
+let config = @minigpt.TrainingConfig::new(4, 8, 20, 0.001, eval_iters=1)
+
+///|
+let result = @minigpt.train_text(
+  corpus_text,
+  @minigpt.TOKENIZER_KIND_CHAR,
+  config,
+  rng,
+)
+
+///|
+let checkpoint = @minigpt.encode_checkpoint(result.model, result.tokenizer)
+
+///|
+let completion = @minigpt.generate_text(
+  result.model,
+  result.tokenizer,
+  "ROMEO:",
+  40,
+  rng,
+)
+```
+
 内置训练超参对齐 nanoGPT `config/train_shakespeare_char.py`：
 
 ```text
@@ -207,6 +241,10 @@ cmd/main/           CLI 入口
 docs/               教学架构图
 data/               Tiny Shakespeare 语料
 ```
+
+Mooncakes 发布包保留根包、`tensor/`、`nn/`、`optim/`、`cmd/main/`、测试、
+README 和 LICENSE；`data/`、`docs/`、agent 协作文档和空工具目录只属于源码仓库，
+不会进入发布包。
 
 ## 验证
 

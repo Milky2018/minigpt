@@ -166,7 +166,14 @@ pub struct TrainingStats {
 }
 
 ///|
-pub fn sample_batch(
+pub struct TrainingResult {
+  model : MiniGPT
+  tokenizer : Tokenizer
+  stats : TrainingStats
+}
+
+///|
+fn sample_batch(
   token_ids : Array[Int],
   batch_size : Int,
   block_size : Int,
@@ -226,23 +233,90 @@ pub fn train_token_ids(
   config : TrainingConfig,
   rng : @random.Rand,
 ) -> TrainingStats {
-  train_token_ids_with_checkpoint_callback(
+  train_token_ids_internal(
     model,
     train_ids,
     val_ids,
     config,
     rng,
+    fn(_iter_num, _train_loss, _val_loss) { () },
+    fn(_iter_num, _loss, _learning_rate) { () },
     fn(_model, _optimizer, _iter_num, _best_val_loss, _config) { () },
   )
 }
 
 ///|
-pub fn train_token_ids_with_checkpoint_callback(
+pub fn train_text(
+  text : String,
+  tokenizer_kind : String,
+  config : TrainingConfig,
+  rng : @random.Rand,
+) -> TrainingResult {
+  train_text_with_options(
+    text,
+    tokenizer_kind,
+    config,
+    N_EMBD,
+    N_HEAD,
+    N_LAYER,
+    rng,
+  )
+}
+
+///|
+pub fn train_text_with_options(
+  text : String,
+  tokenizer_kind : String,
+  config : TrainingConfig,
+  n_embd : Int,
+  n_head : Int,
+  n_layer : Int,
+  rng : @random.Rand,
+) -> TrainingResult {
+  let dataset = prepare_token_dataset(text, tokenizer_kind)
+  let model = MiniGPT::new_gpt_with_options(
+    dataset.tokenizer.vocab_size(),
+    n_embd,
+    n_head,
+    n_layer,
+    config.block_size,
+    rng,
+  )
+  let stats = train_token_ids(
+    model,
+    dataset.train_ids,
+    dataset.val_ids,
+    config,
+    rng,
+  )
+  { model, tokenizer: dataset.tokenizer, stats }
+}
+
+///|
+pub fn train_token_ids_with_progress_callback(
   model : MiniGPT,
   train_ids : Array[Int],
   val_ids : Array[Int],
   config : TrainingConfig,
   rng : @random.Rand,
+  on_eval : (Int, Double, Double) -> Unit,
+  on_log : (Int, Double, Double) -> Unit,
+  on_checkpoint : (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit,
+) -> TrainingStats {
+  train_token_ids_internal(
+    model, train_ids, val_ids, config, rng, on_eval, on_log, on_checkpoint,
+  )
+}
+
+///|
+fn train_token_ids_internal(
+  model : MiniGPT,
+  train_ids : Array[Int],
+  val_ids : Array[Int],
+  config : TrainingConfig,
+  rng : @random.Rand,
+  on_eval : (Int, Double, Double) -> Unit,
+  on_log : (Int, Double, Double) -> Unit,
   on_checkpoint : (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit,
 ) -> TrainingStats {
   let losses : Array[Double] = []
@@ -266,9 +340,7 @@ pub fn train_token_ids_with_checkpoint_callback(
     if iter_num % config.eval_interval == 0 {
       let train_loss = eval_token_ids(model, train_ids, config, rng)
       let val_loss = eval_token_ids(model, val_ids, config, rng)
-      println(
-        "step \{iter_num}: train loss \{train_loss}, val loss \{val_loss}",
-      )
+      on_eval(iter_num, train_loss, val_loss)
       if initial_eval_loss != initial_eval_loss {
         initial_eval_loss = val_loss
       }
@@ -295,7 +367,7 @@ pub fn train_token_ids_with_checkpoint_callback(
     optimizer.step_with_grad_clip(config.grad_clip)
     model.clear_graph()
     if iter_num % config.log_interval == 0 {
-      println("iter \{iter_num}: loss \{loss_value}, lr \{lr}")
+      on_log(iter_num, loss_value, lr)
     }
     iter_num += 1
     if iter_num > config.steps {

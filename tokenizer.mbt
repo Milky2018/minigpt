@@ -37,13 +37,6 @@ pub struct TokenDataset {
 }
 
 ///|
-pub struct ShakespeareCharDataset {
-  tokenizer : CharTokenizer
-  train_ids : Array[Int]
-  val_ids : Array[Int]
-}
-
-///|
 fn collect_sorted_chars(text : String) -> Array[Char] {
   let seen : Map[Char, Unit] = {}
   for ch in text {
@@ -374,19 +367,6 @@ pub fn CharTokenizer::decode(
     }
   }
   String::from_array(chars)
-}
-
-///|
-pub fn prepare_shakespeare_char_dataset(
-  text : String,
-) -> ShakespeareCharDataset {
-  let (tokenizer, ids) = CharTokenizer::train(text)
-  let split = ids.length() * 9 / 10
-  {
-    tokenizer,
-    train_ids: ids[0:split].to_owned(),
-    val_ids: ids[split:ids.length()].to_owned(),
-  }
 }
 
 ///|

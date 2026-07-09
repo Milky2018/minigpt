@@ -281,12 +281,20 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("n_head: \{model.n_head()}")
   println("n_layer: \{model.n_layer()}")
   let saved_checkpoints : Ref[Int] = { val: 0 }
-  let stats = @minigpt.train_token_ids_with_checkpoint_callback(
+  let stats = @minigpt.train_token_ids_with_progress_callback(
     model,
     dataset.train_ids,
     dataset.val_ids,
     config,
     rng,
+    fn(iter_num, train_loss, val_loss) {
+      println(
+        "step \{iter_num}: train loss \{train_loss}, val loss \{val_loss}",
+      )
+    },
+    fn(iter_num, loss, learning_rate) {
+      println("iter \{iter_num}: loss \{loss}, lr \{learning_rate}")
+    },
     fn(model, optimizer, iter_num, best_val_loss, config) {
       let checkpoint = @minigpt.encode_training_checkpoint(
         model,

@@ -42,8 +42,8 @@ test "character tokenizer rejects invalid token ids" {
 }
 
 ///|
-test "prepare_shakespeare_char_dataset uses nanoGPT split" {
-  let dataset = @minigpt.prepare_shakespeare_char_dataset("abcdefghij")
+test "prepare_token_dataset uses nanoGPT split" {
+  let dataset = @minigpt.prepare_token_dataset("abcdefghij", "char")
   @test.assert_eq(dataset.train_ids.length(), 9)
   @test.assert_eq(dataset.val_ids.length(), 1)
   @test.assert_eq(dataset.tokenizer.vocab_size(), 10)

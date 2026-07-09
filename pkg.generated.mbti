@@ -67,15 +67,15 @@ pub fn generate_token_ids(MiniGPT, Array[Int], Int, @random.Rand) -> Array[Int]
 
 pub fn generate_token_ids_with_sampling_options(MiniGPT, Array[Int], Int, @random.Rand, Array[Int]?) -> Array[Int]
 
-pub fn prepare_shakespeare_char_dataset(String) -> ShakespeareCharDataset
-
 pub fn prepare_token_dataset(String, String) -> TokenDataset
 
-pub fn sample_batch(Array[Int], Int, Int, @random.Rand) -> (@tensor.TokenIds, @tensor.TokenIds)
+pub fn train_text(String, String, TrainingConfig, @random.Rand) -> TrainingResult
+
+pub fn train_text_with_options(String, String, TrainingConfig, Int, Int, Int, @random.Rand) -> TrainingResult
 
 pub fn train_token_ids(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand) -> TrainingStats
 
-pub fn train_token_ids_with_checkpoint_callback(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand, (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit) -> TrainingStats
+pub fn train_token_ids_with_progress_callback(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand, (Int, Double, Double) -> Unit, (Int, Double, Double) -> Unit, (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit) -> TrainingStats
 
 // Errors
 pub(all) suberror TokenizerError {
@@ -97,41 +97,13 @@ pub fn CharTokenizer::vocab_size(Self) -> Int
 pub fn CharTokenizer::vocabulary(Self) -> Array[Char]
 
 pub struct MiniGPT {
-  ctx : @tensor.AutogradContext
-  token_embedding_table : @tensor.Tensor
-  position_embedding_table : @tensor.Tensor
-  ln1_weight : Array[@tensor.Tensor]
-  ln1_bias : Array[@tensor.Tensor]
-  wq : Array[@tensor.Tensor]
-  bq : Array[@tensor.Tensor]
-  wk : Array[@tensor.Tensor]
-  bk : Array[@tensor.Tensor]
-  wv : Array[@tensor.Tensor]
-  bv : Array[@tensor.Tensor]
-  wo : Array[@tensor.Tensor]
-  bo : Array[@tensor.Tensor]
-  ln2_weight : Array[@tensor.Tensor]
-  ln2_bias : Array[@tensor.Tensor]
-  w_fc : Array[@tensor.Tensor]
-  b_fc : Array[@tensor.Tensor]
-  w_proj : Array[@tensor.Tensor]
-  b_proj : Array[@tensor.Tensor]
-  ln_f_weight : @tensor.Tensor
-  ln_f_bias : @tensor.Tensor
-  vocab_size : Int
-  n_embd : Int
-  n_head : Int
-  n_layer : Int
-  block_size : Int
+  // private fields
 }
 pub fn MiniGPT::block_size(Self) -> Int
-pub fn MiniGPT::clear_graph(Self) -> Unit
 pub fn MiniGPT::forward(Self, @tensor.TokenIds) -> @tensor.Tensor
-pub fn MiniGPT::forward_train(Self, @tensor.TokenIds, @random.Rand) -> @tensor.Tensor
 pub fn MiniGPT::kind_name(Self) -> String
 pub fn MiniGPT::last_logits(Self, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::loss(Self, @tensor.TokenIds, @tensor.TokenIds) -> @tensor.Tensor
-pub fn MiniGPT::loss_train(Self, @tensor.TokenIds, @tensor.TokenIds, @random.Rand) -> @tensor.Tensor
 pub fn MiniGPT::n_embd(Self) -> Int
 pub fn MiniGPT::n_head(Self) -> Int
 pub fn MiniGPT::n_layer(Self) -> Int
@@ -139,17 +111,7 @@ pub fn MiniGPT::new(Int, @random.Rand) -> Self
 pub fn MiniGPT::new_gpt_with_options(Int, Int, Int, Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::new_transformer_with_options(Int, Int, Int, @random.Rand) -> Self
 pub fn MiniGPT::new_with_options(Int, Int, @random.Rand) -> Self
-pub fn MiniGPT::parameter_weight_decays(Self, Double) -> Array[Double]
-pub fn MiniGPT::parameters(Self) -> Array[@tensor.Tensor]
-pub fn MiniGPT::position_embedding_data(Self) -> Array[Double]
-pub fn MiniGPT::token_embedding_data(Self) -> Array[Double]
 pub fn MiniGPT::vocab_size(Self) -> Int
-
-pub struct ShakespeareCharDataset {
-  tokenizer : CharTokenizer
-  train_ids : Array[Int]
-  val_ids : Array[Int]
-}
 
 pub struct TokenDataset {
   tokenizer : Tokenizer
@@ -189,6 +151,12 @@ pub struct TrainingConfig {
 pub fn TrainingConfig::learning_rate_at(Self, Int) -> Double
 pub fn TrainingConfig::new(Int, Int, Int, Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double, always_save_checkpoint? : Bool) -> Self
 pub fn TrainingConfig::recommended() -> Self
+
+pub struct TrainingResult {
+  model : MiniGPT
+  tokenizer : Tokenizer
+  stats : TrainingStats
+}
 
 pub struct TrainingStats {
   losses : Array[Double]

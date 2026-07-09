@@ -45,32 +45,32 @@ priv struct MiniGPTParameterData {
 
 ///|
 pub struct MiniGPT {
-  ctx : @tensor.AutogradContext
-  token_embedding_table : @tensor.Tensor
-  position_embedding_table : @tensor.Tensor
-  ln1_weight : Array[@tensor.Tensor]
-  ln1_bias : Array[@tensor.Tensor]
-  wq : Array[@tensor.Tensor]
-  bq : Array[@tensor.Tensor]
-  wk : Array[@tensor.Tensor]
-  bk : Array[@tensor.Tensor]
-  wv : Array[@tensor.Tensor]
-  bv : Array[@tensor.Tensor]
-  wo : Array[@tensor.Tensor]
-  bo : Array[@tensor.Tensor]
-  ln2_weight : Array[@tensor.Tensor]
-  ln2_bias : Array[@tensor.Tensor]
-  w_fc : Array[@tensor.Tensor]
-  b_fc : Array[@tensor.Tensor]
-  w_proj : Array[@tensor.Tensor]
-  b_proj : Array[@tensor.Tensor]
-  ln_f_weight : @tensor.Tensor
-  ln_f_bias : @tensor.Tensor
-  vocab_size : Int
-  n_embd : Int
-  n_head : Int
-  n_layer : Int
-  block_size : Int
+  priv ctx : @tensor.AutogradContext
+  priv token_embedding_table : @tensor.Tensor
+  priv position_embedding_table : @tensor.Tensor
+  priv ln1_weight : Array[@tensor.Tensor]
+  priv ln1_bias : Array[@tensor.Tensor]
+  priv wq : Array[@tensor.Tensor]
+  priv bq : Array[@tensor.Tensor]
+  priv wk : Array[@tensor.Tensor]
+  priv bk : Array[@tensor.Tensor]
+  priv wv : Array[@tensor.Tensor]
+  priv bv : Array[@tensor.Tensor]
+  priv wo : Array[@tensor.Tensor]
+  priv bo : Array[@tensor.Tensor]
+  priv ln2_weight : Array[@tensor.Tensor]
+  priv ln2_bias : Array[@tensor.Tensor]
+  priv w_fc : Array[@tensor.Tensor]
+  priv b_fc : Array[@tensor.Tensor]
+  priv w_proj : Array[@tensor.Tensor]
+  priv b_proj : Array[@tensor.Tensor]
+  priv ln_f_weight : @tensor.Tensor
+  priv ln_f_bias : @tensor.Tensor
+  priv vocab_size : Int
+  priv n_embd : Int
+  priv n_head : Int
+  priv n_layer : Int
+  priv block_size : Int
 }
 
 ///|
@@ -417,16 +417,6 @@ pub fn MiniGPT::kind_name(_self : MiniGPT) -> String {
 }
 
 ///|
-pub fn MiniGPT::token_embedding_data(self : MiniGPT) -> Array[Double] {
-  self.token_embedding_table.data()
-}
-
-///|
-pub fn MiniGPT::position_embedding_data(self : MiniGPT) -> Array[Double] {
-  self.position_embedding_table.data()
-}
-
-///|
 fn MiniGPT::parameter_data(self : MiniGPT) -> MiniGPTParameterData {
   {
     token_embedding_table: self.token_embedding_table.data(),
@@ -648,7 +638,7 @@ pub fn MiniGPT::forward(
 }
 
 ///|
-pub fn MiniGPT::forward_train(
+fn MiniGPT::forward_train(
   self : MiniGPT,
   input_ids : @tensor.TokenIds,
   rng : @random.Rand,
@@ -688,7 +678,7 @@ pub fn MiniGPT::loss(
 }
 
 ///|
-pub fn MiniGPT::loss_train(
+fn MiniGPT::loss_train(
   self : MiniGPT,
   input_ids : @tensor.TokenIds,
   target_ids : @tensor.TokenIds,
@@ -698,7 +688,7 @@ pub fn MiniGPT::loss_train(
 }
 
 ///|
-pub fn MiniGPT::parameters(self : MiniGPT) -> Array[@tensor.Tensor] {
+fn MiniGPT::parameters(self : MiniGPT) -> Array[@tensor.Tensor] {
   let params : Array[@tensor.Tensor] = [
     self.token_embedding_table,
     self.position_embedding_table,
@@ -718,7 +708,7 @@ pub fn MiniGPT::parameters(self : MiniGPT) -> Array[@tensor.Tensor] {
 }
 
 ///|
-pub fn MiniGPT::parameter_weight_decays(
+fn MiniGPT::parameter_weight_decays(
   self : MiniGPT,
   weight_decay : Double,
 ) -> Array[Double] {
@@ -738,6 +728,6 @@ pub fn MiniGPT::parameter_weight_decays(
 }
 
 ///|
-pub fn MiniGPT::clear_graph(self : MiniGPT) -> Unit {
+fn MiniGPT::clear_graph(self : MiniGPT) -> Unit {
   self.ctx.clear_graph()
 }

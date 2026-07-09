@@ -146,6 +146,23 @@ connections, a final layer norm, and a tied embedding language-model head
 trained with next-token cross entropy.
 _Avoid_: Corpus substring lookup or side-channel sampler
 
+**Neural Network Primitive**:
+A reusable tensor-backed operation or layer-level building block such as
+embedding lookup or cross entropy; these live in `nn/` when they are not tied to
+MiniGPT checkpoint, tokenizer, or CLI behavior.
+_Avoid_: Placing high-level model orchestration in `nn/`
+
+**MiniGPT Public Model**:
+The opaque high-level root-package API that owns the GPT model shape,
+tokenizer-aware training/generation flow, and checkpoint compatibility.
+_Avoid_: Treating the full MiniGPT model as a low-level `nn/` primitive
+
+**Training Result**:
+The value returned by high-level text training, containing the trained MiniGPT
+model, tokenizer, and training statistics needed for generation or checkpoint
+encoding.
+_Avoid_: Forcing library callers to assemble model, dataset, and stats by hand
+
 **Gradient Checker**:
 A testing utility that compares autodiff gradients against finite-difference
 numerical gradients for small tensor programs.
@@ -157,7 +174,7 @@ training, and generation together for demos without owning model logic.
 _Avoid_: Putting core model or tensor implementation in `cmd/main`
 
 **Train Command**:
-The CLI entry command that reads a text corpus, builds the character tokenizer,
+The CLI entry command that reads a text corpus, builds the selected tokenizer,
 creates a fresh MiniGPT model, trains it for the requested number of steps, and
 persists a checkpoint for later generation.
 _Avoid_: Training without saving weights
@@ -168,8 +185,9 @@ and model weights, and samples continuation text from a prompt.
 _Avoid_: Re-training inside generation
 
 **Model Checkpoint**:
-A compact binary file containing checkpoint version, model kind, character
-vocabulary, block size, embedding dimension, and trainable transformer weights.
+A compact binary file containing checkpoint version, model kind, tokenizer kind
+and vocabulary, block size, embedding dimension, and trainable transformer
+weights.
 _Avoid_: Saving weights without tokenizer vocabulary
 
 **Completion Trace**:
@@ -181,3 +199,14 @@ _Avoid_: Final-only generation output
 The optional character prefix limit used by CLI demos to shrink training inputs
 for smoke tests; `0` means use the full corpus and is the default.
 _Avoid_: Assuming the default model only saw a tiny corpus prefix
+
+**Mooncakes Publish Surface**:
+The files distributed by `moon package` and `moon publish`: reusable packages,
+the CLI example, tests, generated interfaces, README, and LICENSE.
+_Avoid_: Publishing large demo corpora, teaching diagrams, or agent-only notes
+
+**Repository Teaching Asset**:
+A file kept in the source repository for lessons, demos, or project planning,
+such as `data/` corpora and `docs/` diagrams, but excluded from the Mooncakes
+package.
+_Avoid_: Assuming every repository file is part of the published package
