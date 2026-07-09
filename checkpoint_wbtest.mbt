@@ -101,3 +101,25 @@ test "checkpoint roundtrips word tokenizer" {
   @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
   @test.assert_eq(loaded_tokenizer.decode([2, 3, 1]), "heat olive oil")
 }
+
+///|
+test "checkpoint roundtrips BPE tokenizer merge rules" {
+  let rng = @random.Rand::new()
+  let (bpe_tokenizer, _) = @tokenizer.BpeTokenizer::train("abababab", 4)
+  let tokenizer = @tokenizer.Tokenizer::from_bpe(bpe_tokenizer)
+  let model = MiniGPT::new_gpt_with_options(
+    tokenizer.vocab_size(),
+    8,
+    2,
+    1,
+    4,
+    rng,
+  )
+  let bytes = encode_checkpoint(model, tokenizer)
+  let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
+  @test.assert_eq(loaded_tokenizer.kind_name(), "bpe")
+  @test.assert_eq(loaded_tokenizer.vocabulary(), ["a", "b", "ab", "abab"])
+  @test.assert_eq(loaded_tokenizer.bpe_merges().length(), 2)
+  @test.assert_eq(loaded_tokenizer.encode("abababab"), [3, 3])
+  @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
+}

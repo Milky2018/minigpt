@@ -6,11 +6,17 @@ import {
 }
 
 // Values
+pub const DEFAULT_BPE_VOCAB_SIZE : Int = 512
+
+pub const TOKENIZER_KIND_BPE : String = "bpe"
+
 pub const TOKENIZER_KIND_CHAR : String = "char"
 
 pub const TOKENIZER_KIND_WORD : String = "word"
 
 pub fn prepare_token_dataset(String, String) -> TokenDataset
+
+pub fn prepare_token_dataset_with_options(String, String, Int) -> TokenDataset
 
 // Errors
 pub(all) suberror TokenizerError {
@@ -20,6 +26,25 @@ pub(all) suberror TokenizerError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct BpeMerge {
+  left : String
+  right : String
+  merged : String
+}
+pub fn BpeMerge::new(String, String, String) -> Self
+
+pub struct BpeTokenizer {
+  // private fields
+}
+pub fn BpeTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn BpeTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn BpeTokenizer::from_vocabulary_and_merges(Array[String], Array[BpeMerge]) -> Self
+pub fn BpeTokenizer::kind_name(Self) -> String
+pub fn BpeTokenizer::merges(Self) -> Array[BpeMerge]
+pub fn BpeTokenizer::train(String, Int) -> (Self, Array[Int])
+pub fn BpeTokenizer::vocab_size(Self) -> Int
+pub fn BpeTokenizer::vocabulary(Self) -> Array[String]
+
 pub struct CharTokenizer {
   // private fields
 }
@@ -40,11 +65,15 @@ pub struct TokenDataset {
 pub(all) enum Tokenizer {
   Character(CharTokenizer)
   Word(WordTokenizer)
+  Bpe(BpeTokenizer)
 }
+pub fn Tokenizer::bpe_merges(Self) -> Array[BpeMerge]
 pub fn Tokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
 pub fn Tokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn Tokenizer::from_bpe(BpeTokenizer) -> Self
 pub fn Tokenizer::from_char(CharTokenizer) -> Self
 pub fn Tokenizer::from_kind_and_vocabulary(String, Array[String]) -> Self
+pub fn Tokenizer::from_kind_vocabulary_and_merges(String, Array[String], Array[BpeMerge]) -> Self
 pub fn Tokenizer::from_word(WordTokenizer) -> Self
 pub fn Tokenizer::kind_name(Self) -> String
 pub fn Tokenizer::vocab_size(Self) -> Int

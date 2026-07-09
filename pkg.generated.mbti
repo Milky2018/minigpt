@@ -67,6 +67,8 @@ pub fn train_text(String, String, TrainingConfig, @random.Rand) -> TrainingResul
 
 pub fn train_text_with_options(String, String, TrainingConfig, Int, Int, Int, @random.Rand) -> TrainingResult
 
+pub fn train_text_with_tokenizer_options(String, String, Int, TrainingConfig, Int, Int, Int, @random.Rand) -> TrainingResult
+
 pub fn train_token_ids(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand) -> TrainingStats
 
 pub fn train_token_ids_with_progress_callback(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand, (Int, Double, Double) -> Unit, (Int, Double, Double) -> Unit, (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit) -> TrainingStats

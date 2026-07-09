@@ -273,7 +273,32 @@ pub fn train_text_with_options(
   n_layer : Int,
   rng : @random.Rand,
 ) -> TrainingResult {
-  let dataset = @tokenizer.prepare_token_dataset(text, tokenizer_kind)
+  train_text_with_tokenizer_options(
+    text,
+    tokenizer_kind,
+    @tokenizer.DEFAULT_BPE_VOCAB_SIZE,
+    config,
+    n_embd,
+    n_head,
+    n_layer,
+    rng,
+  )
+}
+
+///|
+pub fn train_text_with_tokenizer_options(
+  text : String,
+  tokenizer_kind : String,
+  bpe_vocab_size : Int,
+  config : TrainingConfig,
+  n_embd : Int,
+  n_head : Int,
+  n_layer : Int,
+  rng : @random.Rand,
+) -> TrainingResult {
+  let dataset = @tokenizer.prepare_token_dataset_with_options(
+    text, tokenizer_kind, bpe_vocab_size,
+  )
   let model = MiniGPT::new_gpt_with_options(
     dataset.tokenizer.vocab_size(),
     n_embd,

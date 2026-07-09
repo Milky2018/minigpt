@@ -5,6 +5,9 @@ const DEFAULT_DATA_PATH : String = "data/tiny_shakespeare.txt"
 const DEFAULT_TOKENIZER_KIND : String = "char"
 
 ///|
+const DEFAULT_BPE_VOCAB_SIZE : Int = @tokenizer.DEFAULT_BPE_VOCAB_SIZE
+
+///|
 const DEFAULT_PROMPT : String = "ROMEO:"
 
 ///|
@@ -44,8 +47,14 @@ fn training_options() -> Array[@argparse.OptionArg] {
     OptionArg(
       "tokenizer",
       long="tokenizer",
-      about="tokenizer kind: char or word",
+      about="tokenizer kind: char, word, or bpe",
       default_values=[DEFAULT_TOKENIZER_KIND],
+    ),
+    OptionArg(
+      "bpe-vocab-size",
+      long="bpe-vocab-size",
+      about="target BPE vocabulary size",
+      default_values=[DEFAULT_BPE_VOCAB_SIZE.to_string()],
     ),
     OptionArg("out", long="out", about="model checkpoint output path", default_values=[
       DEFAULT_MODEL_PATH,
@@ -113,7 +122,7 @@ fn generate_options() -> Array[@argparse.OptionArg] {
     OptionArg(
       "max-new-tokens",
       long="max-new-tokens",
-      about="number of generated characters",
+      about="number of generated tokens",
       default_values=[DEFAULT_MAX_NEW_TOKENS.to_string()],
     ),
     OptionArg("top-k", long="top-k", about="sampler top-k", default_values=[
@@ -175,6 +184,7 @@ fn parse_tokenizer_kind(matches : @argparse.Matches) -> String {
   match value(matches, "tokenizer") {
     "char" => "char"
     "word" => "word"
+    "bpe" => "bpe"
     other => abort("unsupported tokenizer kind: \{other}")
   }
 }
@@ -183,11 +193,14 @@ fn parse_tokenizer_kind(matches : @argparse.Matches) -> String {
 fn load_dataset(
   path : String,
   tokenizer_kind : String,
+  bpe_vocab_size : Int,
 ) -> @tokenizer.TokenDataset {
   let text = @fs.read_file_to_string(path, encoding="utf8") catch {
     _ => abort("failed to read corpus '\{path}'")
   }
-  @tokenizer.prepare_token_dataset(text, tokenizer_kind)
+  @tokenizer.prepare_token_dataset_with_options(
+    text, tokenizer_kind, bpe_vocab_size,
+  )
 }
 
 ///|
@@ -246,16 +259,20 @@ fn print_completion_trace(
 fn run_train(matches : @argparse.Matches) -> Unit {
   let data_path = value(matches, "data")
   let tokenizer_kind = parse_tokenizer_kind(matches)
+  let bpe_vocab_size = int_value(matches, "bpe-vocab-size")
   let out_path = value(matches, "out")
   let config = training_config(matches)
   let n_embd = int_value(matches, "n-embd")
   let n_head = int_value(matches, "n-head")
   let n_layer = int_value(matches, "n-layer")
   let rng = @random.Rand::new()
-  let dataset = load_dataset(data_path, tokenizer_kind)
+  let dataset = load_dataset(data_path, tokenizer_kind, bpe_vocab_size)
   println("command: train")
   println("data: \{data_path}")
   println("tokenizer: \{dataset.tokenizer.kind_name()}")
+  if tokenizer_kind == "bpe" {
+    println("bpe vocab size: \{bpe_vocab_size}")
+  }
   println("vocab size: \{dataset.tokenizer.vocab_size()}")
   println("train tokens: \{dataset.train_ids.length()}")
   println("val tokens: \{dataset.val_ids.length()}")

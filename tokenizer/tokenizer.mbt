@@ -5,6 +5,12 @@ pub const TOKENIZER_KIND_CHAR : String = "char"
 pub const TOKENIZER_KIND_WORD : String = "word"
 
 ///|
+pub const TOKENIZER_KIND_BPE : String = "bpe"
+
+///|
+pub const DEFAULT_BPE_VOCAB_SIZE : Int = 512
+
+///|
 pub(all) suberror TokenizerError {
   UnknownCharacter(Char)
   UnknownToken(String)
@@ -24,9 +30,33 @@ pub struct WordTokenizer {
 }
 
 ///|
+pub struct BpeMerge {
+  left : String
+  right : String
+  merged : String
+}
+
+///|
+pub fn BpeMerge::new(
+  left : String,
+  right : String,
+  merged : String,
+) -> BpeMerge {
+  { left, right, merged }
+}
+
+///|
+pub struct BpeTokenizer {
+  priv tokens : Array[String]
+  priv token_to_id : Map[String, Int]
+  priv merges : Array[BpeMerge]
+}
+
+///|
 pub(all) enum Tokenizer {
   Character(CharTokenizer)
   Word(WordTokenizer)
+  Bpe(BpeTokenizer)
 }
 
 ///|
@@ -107,6 +137,32 @@ fn token_map(tokens : Array[String]) -> Map[String, Int] {
 }
 
 ///|
+fn validate_ordered_tokens(tokens : Array[String]) -> Unit {
+  if tokens.length() == 0 {
+    abort("tokenizer vocabulary must not be empty")
+  }
+  let seen : Map[String, Unit] = {}
+  for token in tokens {
+    if token == "" {
+      abort("tokenizer vocabulary must not contain empty tokens")
+    }
+    if seen.contains(token) {
+      abort("tokenizer vocabulary must not contain duplicates")
+    }
+    seen[token] = ()
+  }
+}
+
+///|
+fn split_char_tokens(text : String) -> Array[String] {
+  let tokens : Array[String] = []
+  for ch in text {
+    tokens.push(ch.to_string())
+  }
+  tokens
+}
+
+///|
 fn join_word_tokens(tokens : Array[String]) -> String {
   let buf = StringBuilder::new()
   let mut needs_space = false
@@ -126,6 +182,15 @@ fn join_word_tokens(tokens : Array[String]) -> String {
 }
 
 ///|
+fn join_tokens(tokens : Array[String]) -> String {
+  let buf = StringBuilder::new()
+  for token in tokens {
+    buf.write_string(token)
+  }
+  buf.to_string()
+}
+
+///|
 fn single_char_token(text : String) -> Char {
   let chars : Array[Char] = []
   for ch in text {
@@ -135,6 +200,78 @@ fn single_char_token(text : String) -> Char {
     abort("character tokenizer vocabulary item must contain one character")
   }
   chars[0]
+}
+
+///|
+fn pair_key(left : String, right : String) -> String {
+  left + "\u{1f}" + right
+}
+
+///|
+priv struct BpePair {
+  left : String
+  right : String
+  merged : String
+}
+
+///|
+fn best_bpe_pair(
+  tokens : Array[String],
+  token_to_id : Map[String, Int],
+) -> BpePair? {
+  if tokens.length() < 2 {
+    return None
+  }
+  let counts : Map[String, Int] = {}
+  let lefts : Map[String, String] = {}
+  let rights : Map[String, String] = {}
+  for i in 0..<(tokens.length() - 1) {
+    let left = tokens[i]
+    let right = tokens[i + 1]
+    let merged = left + right
+    if !token_to_id.contains(merged) {
+      let key = pair_key(left, right)
+      counts[key] = counts.get_or_default(key, 0) + 1
+      lefts[key] = left
+      rights[key] = right
+    }
+  }
+  let mut best_key = ""
+  let mut best_count = 0
+  for key, count in counts {
+    if count > best_count ||
+      (count == best_count && best_count > 0 && key.compare(best_key) < 0) {
+      best_key = key
+      best_count = count
+    }
+  }
+  if best_count < 2 {
+    return None
+  }
+  let left = lefts[best_key]
+  let right = rights[best_key]
+  Some({ left, right, merged: left + right })
+}
+
+///|
+fn apply_bpe_merge(
+  tokens : Array[String],
+  left : String,
+  right : String,
+  merged : String,
+) -> Array[String] {
+  let out : Array[String] = []
+  let mut i = 0
+  while i < tokens.length() {
+    if i + 1 < tokens.length() && tokens[i] == left && tokens[i + 1] == right {
+      out.push(merged)
+      i += 2
+    } else {
+      out.push(tokens[i])
+      i += 1
+    }
+  }
+  out
 }
 
 ///|
@@ -164,6 +301,122 @@ pub fn CharTokenizer::train(text : String) -> (CharTokenizer, Array[Int]) {
     InvalidTokenId(_) => abort("unexpected token id error while encoding text")
   }
   (tokenizer, ids)
+}
+
+///|
+pub fn BpeTokenizer::from_vocabulary_and_merges(
+  vocabulary : Array[String],
+  merges : Array[BpeMerge],
+) -> BpeTokenizer {
+  validate_ordered_tokens(vocabulary)
+  let token_to_id = token_map(vocabulary)
+  for merge in merges {
+    if !token_to_id.contains(merge.left) ||
+      !token_to_id.contains(merge.right) ||
+      !token_to_id.contains(merge.merged) {
+      abort("BPE merge rule must reference vocabulary tokens")
+    }
+  }
+  { tokens: vocabulary.copy(), token_to_id, merges: merges.copy() }
+}
+
+///|
+pub fn BpeTokenizer::train(
+  text : String,
+  vocab_size : Int,
+) -> (BpeTokenizer, Array[Int]) {
+  if vocab_size <= 0 {
+    abort("BPE vocabulary size must be positive")
+  }
+  let mut current = split_char_tokens(text)
+  if current.length() == 0 {
+    abort("BPE tokenizer training text must not be empty")
+  }
+  let vocabulary : Array[String] = []
+  for ch in collect_sorted_chars(text) {
+    vocabulary.push(ch.to_string())
+  }
+  let token_to_id = token_map(vocabulary)
+  let merges : Array[BpeMerge] = []
+  while vocabulary.length() < vocab_size {
+    match best_bpe_pair(current, token_to_id) {
+      Some(pair) => {
+        current = apply_bpe_merge(current, pair.left, pair.right, pair.merged)
+        token_to_id[pair.merged] = vocabulary.length()
+        vocabulary.push(pair.merged)
+        merges.push(BpeMerge::new(pair.left, pair.right, pair.merged))
+      }
+      None => break
+    }
+  }
+  let tokenizer = BpeTokenizer::from_vocabulary_and_merges(vocabulary, merges)
+  let ids = tokenizer.encode(text) catch {
+    UnknownToken(_) => abort("trained tokenizer rejected training text")
+    UnknownCharacter(_) => abort("trained tokenizer rejected training text")
+    InvalidTokenId(_) => abort("unexpected token id error while encoding text")
+  }
+  (tokenizer, ids)
+}
+
+///|
+pub fn BpeTokenizer::kind_name(_self : BpeTokenizer) -> String {
+  TOKENIZER_KIND_BPE
+}
+
+///|
+pub fn BpeTokenizer::vocab_size(self : BpeTokenizer) -> Int {
+  self.tokens.length()
+}
+
+///|
+pub fn BpeTokenizer::vocabulary(self : BpeTokenizer) -> Array[String] {
+  self.tokens.copy()
+}
+
+///|
+pub fn BpeTokenizer::merges(self : BpeTokenizer) -> Array[BpeMerge] {
+  self.merges.copy()
+}
+
+///|
+pub fn BpeTokenizer::encode(
+  self : BpeTokenizer,
+  text : String,
+) -> Array[Int] raise TokenizerError {
+  let mut tokens : Array[String] = []
+  for ch in text {
+    let token = ch.to_string()
+    if !self.token_to_id.contains(token) {
+      raise UnknownCharacter(ch)
+    }
+    tokens.push(token)
+  }
+  for merge in self.merges {
+    tokens = apply_bpe_merge(tokens, merge.left, merge.right, merge.merged)
+  }
+  let ids : Array[Int] = []
+  for token in tokens {
+    match self.token_to_id.get(token) {
+      Some(id) => ids.push(id)
+      None => raise UnknownToken(token)
+    }
+  }
+  ids
+}
+
+///|
+pub fn BpeTokenizer::decode(
+  self : BpeTokenizer,
+  ids : Array[Int],
+) -> String raise TokenizerError {
+  let tokens : Array[String] = []
+  for id in ids {
+    match self.tokens.get(id) {
+      Some(token) => tokens.push(token)
+      None => raise InvalidTokenId(id)
+    }
+  }
+  join_tokens(tokens)
 }
 
 ///|
@@ -255,9 +508,23 @@ pub fn Tokenizer::from_word(tokenizer : WordTokenizer) -> Tokenizer {
 }
 
 ///|
+pub fn Tokenizer::from_bpe(tokenizer : BpeTokenizer) -> Tokenizer {
+  Bpe(tokenizer)
+}
+
+///|
 pub fn Tokenizer::from_kind_and_vocabulary(
   kind : String,
   vocabulary : Array[String],
+) -> Tokenizer {
+  Tokenizer::from_kind_vocabulary_and_merges(kind, vocabulary, [])
+}
+
+///|
+pub fn Tokenizer::from_kind_vocabulary_and_merges(
+  kind : String,
+  vocabulary : Array[String],
+  merges : Array[BpeMerge],
 ) -> Tokenizer {
   match kind {
     "char" => {
@@ -268,6 +535,7 @@ pub fn Tokenizer::from_kind_and_vocabulary(
       Character(CharTokenizer::from_chars(chars))
     }
     "word" => Word(WordTokenizer::from_tokens(vocabulary))
+    "bpe" => Bpe(BpeTokenizer::from_vocabulary_and_merges(vocabulary, merges))
     _ => abort("unsupported tokenizer kind: \{kind}")
   }
 }
@@ -277,6 +545,7 @@ pub fn Tokenizer::kind_name(self : Tokenizer) -> String {
   match self {
     Character(tokenizer) => tokenizer.kind_name()
     Word(tokenizer) => tokenizer.kind_name()
+    Bpe(tokenizer) => tokenizer.kind_name()
   }
 }
 
@@ -285,6 +554,7 @@ pub fn Tokenizer::vocab_size(self : Tokenizer) -> Int {
   match self {
     Character(tokenizer) => tokenizer.vocab_size()
     Word(tokenizer) => tokenizer.vocab_size()
+    Bpe(tokenizer) => tokenizer.vocab_size()
   }
 }
 
@@ -299,6 +569,15 @@ pub fn Tokenizer::vocabulary(self : Tokenizer) -> Array[String] {
       vocabulary
     }
     Word(tokenizer) => tokenizer.vocabulary()
+    Bpe(tokenizer) => tokenizer.vocabulary()
+  }
+}
+
+///|
+pub fn Tokenizer::bpe_merges(self : Tokenizer) -> Array[BpeMerge] {
+  match self {
+    Bpe(tokenizer) => tokenizer.merges()
+    _ => []
   }
 }
 
@@ -310,6 +589,7 @@ pub fn Tokenizer::encode(
   match self {
     Character(tokenizer) => tokenizer.encode(text)
     Word(tokenizer) => tokenizer.encode(text)
+    Bpe(tokenizer) => tokenizer.encode(text)
   }
 }
 
@@ -321,6 +601,7 @@ pub fn Tokenizer::decode(
   match self {
     Character(tokenizer) => tokenizer.decode(ids)
     Word(tokenizer) => tokenizer.decode(ids)
+    Bpe(tokenizer) => tokenizer.decode(ids)
   }
 }
 
@@ -374,6 +655,19 @@ pub fn prepare_token_dataset(
   text : String,
   tokenizer_kind : String,
 ) -> TokenDataset {
+  prepare_token_dataset_with_options(
+    text,
+    tokenizer_kind,
+    DEFAULT_BPE_VOCAB_SIZE,
+  )
+}
+
+///|
+pub fn prepare_token_dataset_with_options(
+  text : String,
+  tokenizer_kind : String,
+  bpe_vocab_size : Int,
+) -> TokenDataset {
   let (tokenizer, ids) = match tokenizer_kind {
     "char" => {
       let (tokenizer, ids) = CharTokenizer::train(text)
@@ -382,6 +676,10 @@ pub fn prepare_token_dataset(
     "word" => {
       let (tokenizer, ids) = WordTokenizer::train(text)
       (Tokenizer::from_word(tokenizer), ids)
+    }
+    "bpe" => {
+      let (tokenizer, ids) = BpeTokenizer::train(text, bpe_vocab_size)
+      (Tokenizer::from_bpe(tokenizer), ids)
     }
     _ => abort("unsupported tokenizer kind: \{tokenizer_kind}")
   }

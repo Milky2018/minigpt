@@ -41,8 +41,8 @@ sentences 为种子扩展而来，来源和许可证记录在 `data/RECIPE_DEMO_
 模型质量 benchmark。
 
 菜谱语料可以直接训练。默认 tokenizer 仍然是 `char`，用于对齐 nanoGPT；
-菜谱演示建议显式使用 `--tokenizer word`，让模型一次预测一个英文词，更容易在
-小语料上快速看到整词补全效果。
+菜谱演示可以显式使用 `--tokenizer word`，让模型一次预测一个英文词；英文长文本
+更推荐尝试 `--tokenizer bpe`，它会从训练语料自动学习子词词表。
 
 ## 训练
 
@@ -62,7 +62,8 @@ moon run --release cmd/main -- train --out minigpt-model.bin --steps 5000
 
 ```text
 --data                    UTF-8 语料路径，默认 data/tiny_shakespeare.txt
---tokenizer               tokenizer 类型：char 或 word，默认 char
+--tokenizer               tokenizer 类型：char、word 或 bpe，默认 char
+--bpe-vocab-size          BPE 目标词表大小，默认 512
 --out                     checkpoint 输出路径，默认 minigpt-model.bin
 --steps                   训练迭代数，默认 5000
 --batch-size              batch size，默认 64
@@ -123,6 +124,24 @@ moon run --release cmd/main -- generate \
   --model /tmp/minigpt-recipe.bin \
   --prompt "heat" \
   --max-new-tokens 8
+```
+
+自动训练 BPE tokenizer 的示例：
+
+```bash
+moon run --release cmd/main -- train \
+  --tokenizer bpe \
+  --bpe-vocab-size 512 \
+  --out /tmp/minigpt-bpe.bin \
+  --steps 20 \
+  --batch-size 4 \
+  --block-size 32 \
+  --n-embd 64 \
+  --n-head 4 \
+  --n-layer 2 \
+  --eval-interval 5 \
+  --eval-iters 2 \
+  --always-save-checkpoint true
 ```
 
 作为库使用时，推荐从根包入口开始，不需要直接操作 `tensor/` 或 `nn/`：
@@ -186,7 +205,8 @@ moon run --release cmd/main -- generate --model minigpt-model.bin --prompt ROMEO
 
 如果 `minigpt-model.bin` 不存在，先运行上面的 `train` 命令；训练步数太少时可能不会触发 nanoGPT 的保存条件。
 
-每生成一个字符，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
+每生成一个 token，都会打印当前已经补全出的完整内容；生成长度由
+`--max-new-tokens` 控制：
 
 ```text
 completion:
@@ -201,14 +221,15 @@ ROMEO:The
 ```text
 --model           checkpoint 路径，默认 minigpt-model.bin
 --prompt          补全起始文本，默认 ROMEO:
---max-new-tokens  生成字符数，默认 80
+--max-new-tokens  生成 token 数，默认 80
 --top-k           从模型 logits 最高的几个候选中采样，默认 20
 --temperature     采样温度，默认 0.8
 ```
 
 checkpoint 会保存训练时使用的 tokenizer。字符级 checkpoint 只能编码训练语料
-词表里的字符；word-level checkpoint 只能编码训练语料词表里的词。默认
-Shakespeare 语料不包含中文字符，所以中文 prompt 会被拒绝。
+词表里的字符；word-level checkpoint 只能编码训练语料词表里的词；BPE
+checkpoint 会保存 vocabulary 和 merge rules，可以编码由训练字符集组成的新词。
+默认 Shakespeare 语料不包含中文字符，所以中文 prompt 会被拒绝。
 
 ## Checkpoint 大小
 

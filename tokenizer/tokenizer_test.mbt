@@ -82,3 +82,38 @@ test "prepare_token_dataset can use word tokenizer" {
   @test.assert_eq(dataset.train_ids.length(), 5)
   @test.assert_eq(dataset.val_ids.length(), 1)
 }
+
+///|
+test "BPE tokenizer learns frequent adjacent pairs" {
+  let (tokenizer, ids) = @tokenizer.BpeTokenizer::train("abababab", 4)
+  @test.assert_eq(tokenizer.kind_name(), "bpe")
+  @test.assert_eq(tokenizer.vocabulary(), ["a", "b", "ab", "abab"])
+  @test.assert_eq(tokenizer.merges().length(), 2)
+  @test.assert_eq(ids, [3, 3])
+  @test.assert_eq(tokenizer.decode(ids), "abababab")
+  @test.assert_eq(tokenizer.encode("abab"), [3])
+}
+
+///|
+test "BPE tokenizer rejects unseen characters" {
+  let (tokenizer, _) = @tokenizer.BpeTokenizer::train("abababab", 4)
+  try {
+    let _ = tokenizer.encode("abc")
+  } catch {
+    UnknownCharacter(ch) => @test.assert_eq(ch, 'c')
+    _ => fail("expected unknown character")
+  } noraise {
+    _ => fail("expected encode to raise")
+  }
+}
+
+///|
+test "prepare_token_dataset can use BPE tokenizer" {
+  let dataset = @tokenizer.prepare_token_dataset_with_options(
+    "abababababababab", "bpe", 4,
+  )
+  @test.assert_eq(dataset.tokenizer.kind_name(), "bpe")
+  @test.assert_eq(dataset.tokenizer.vocab_size(), 4)
+  @test.assert_eq(dataset.train_ids.length(), 3)
+  @test.assert_eq(dataset.val_ids.length(), 1)
+}

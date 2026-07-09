@@ -163,6 +163,11 @@ ids back to text, and preparing tokenized train/validation splits.
 _Avoid_: Keeping tokenizer implementation inside the high-level MiniGPT model
 module
 
+**BPE Tokenizer**:
+A tokenizer that starts from character tokens and learns frequent adjacent-token
+merge rules from the training corpus, producing a compact subword vocabulary.
+_Avoid_: Fixed external token tables for this teaching project
+
 **Training Result**:
 The value returned by high-level text training, containing the trained MiniGPT
 model, tokenizer, and training statistics needed for generation or checkpoint

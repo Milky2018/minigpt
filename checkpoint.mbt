@@ -1,8 +1,14 @@
 ///|
-const CHECKPOINT_VERSION : Int = 9
+const CHECKPOINT_VERSION : Int = 10
 
 ///|
 const LEGACY_CHAR_CHECKPOINT_VERSION : Int = 8
+
+///|
+const LEGACY_TOKENIZER_CHECKPOINT_VERSION : Int = 9
+
+///|
+const TOKENIZER_MERGES_CHECKPOINT_VERSION : Int = 10
 
 ///|
 const CHECKPOINT_MAGIC : Int = 1296649799
@@ -13,6 +19,7 @@ priv struct MiniGPTCheckpoint {
   model_kind : String?
   tokenizer_kind : String?
   vocabulary : Array[String]
+  bpe_merges : Array[@tokenizer.BpeMerge]
   n_embd : Int
   n_head : Int
   n_layer : Int
@@ -34,6 +41,7 @@ fn MiniGPTCheckpoint::from_model(
     model_kind: Some(model.kind_name()),
     tokenizer_kind: Some(tokenizer.kind_name()),
     vocabulary: tokenizer.vocabulary(),
+    bpe_merges: tokenizer.bpe_merges(),
     n_embd: model.n_embd(),
     n_head: model.n_head(),
     n_layer: model.n_layer(),
@@ -51,6 +59,7 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
   self : MiniGPTCheckpoint,
 ) -> (MiniGPT, @tokenizer.Tokenizer) {
   if self.version != CHECKPOINT_VERSION &&
+    self.version != LEGACY_TOKENIZER_CHECKPOINT_VERSION &&
     self.version != LEGACY_CHAR_CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
@@ -61,9 +70,10 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
     Some(kind) => kind
     None => abort("missing MiniGPT checkpoint tokenizer kind")
   }
-  let tokenizer = @tokenizer.Tokenizer::from_kind_and_vocabulary(
+  let tokenizer = @tokenizer.Tokenizer::from_kind_vocabulary_and_merges(
     tokenizer_kind,
     self.vocabulary,
+    self.bpe_merges,
   )
   let model = MiniGPT::from_parameter_data(
     tokenizer.vocab_size(),
@@ -116,6 +126,12 @@ fn encode_checkpoint_data(checkpoint : MiniGPTCheckpoint) -> Bytes {
   for token in checkpoint.vocabulary {
     write_string(buffer, token)
   }
+  buffer.write_int_le(checkpoint.bpe_merges.length())
+  for merge in checkpoint.bpe_merges {
+    write_string(buffer, merge.left)
+    write_string(buffer, merge.right)
+    write_string(buffer, merge.merged)
+  }
   buffer.write_int_le(checkpoint.n_embd)
   buffer.write_int_le(checkpoint.n_head)
   buffer.write_int_le(checkpoint.n_layer)
@@ -162,7 +178,9 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
     abort("invalid MiniGPT checkpoint magic")
   }
   let version = reader.read_int_le()
-  if version != CHECKPOINT_VERSION && version != LEGACY_CHAR_CHECKPOINT_VERSION {
+  if version != CHECKPOINT_VERSION &&
+    version != LEGACY_TOKENIZER_CHECKPOINT_VERSION &&
+    version != LEGACY_CHAR_CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
   let model_kind = reader.read_string()
@@ -171,6 +189,12 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
   let vocabulary : Array[String] = []
   for _ in 0..<vocab_size {
     vocabulary.push(reader.read_string())
+  }
+  let bpe_merges : Array[@tokenizer.BpeMerge] = if version >=
+    TOKENIZER_MERGES_CHECKPOINT_VERSION {
+    reader.read_bpe_merges()
+  } else {
+    []
   }
   let n_embd = reader.read_int_le()
   let n_head = reader.read_int_le()
@@ -218,6 +242,7 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
     model_kind: Some(model_kind),
     tokenizer_kind: Some(tokenizer_kind),
     vocabulary,
+    bpe_merges,
     n_embd,
     n_head,
     n_layer,
@@ -393,6 +418,27 @@ fn BytesReader::read_double_arrays(self : BytesReader) -> Array[Array[Double]] {
     values.push(self.read_doubles())
   }
   values
+}
+
+///|
+fn BytesReader::read_bpe_merges(
+  self : BytesReader,
+) -> Array[@tokenizer.BpeMerge] {
+  let length = self.read_int_le()
+  if length < 0 {
+    abort("invalid checkpoint BPE merge count")
+  }
+  let merges : Array[@tokenizer.BpeMerge] = []
+  for _ in 0..<length {
+    merges.push(
+      @tokenizer.BpeMerge::new(
+        self.read_string(),
+        self.read_string(),
+        self.read_string(),
+      ),
+    )
+  }
+  merges
 }
 
 ///|
