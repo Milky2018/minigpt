@@ -1,8 +1,13 @@
 import {
+  "moonbitlang/core/double",
+  "moonbitlang/core/math",
+  "moonbitlang/core/random",
+}
+
+import {
   "Milky2018/minigpt/nn",
   "Milky2018/minigpt/optim",
   "Milky2018/minigpt/tensor",
   "Milky2018/minigpt/tokenizer",
-  "moonbitlang/core/double",
-  "moonbitlang/core/random",
+  "moonbitlang/core/test",
 } for "test"
