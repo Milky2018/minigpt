@@ -340,7 +340,7 @@ fn scaled_randn(
   for i in 0..<data.length() {
     data[i] *= 0.02
   }
-  tensor.set_data_in_place(data)
+  tensor.assign_parameter_data(data)
   tensor
 }
 
@@ -414,7 +414,7 @@ pub fn GPT::GPT(
     for i in 0..<wo_data.length() {
       wo_data[i] *= residual_scale / 0.02
     }
-    wo[wo.length() - 1].set_data_in_place(wo_data)
+    wo[wo.length() - 1].assign_parameter_data(wo_data)
     bo.push(@tensor.Tensor::zeros([n_embd]))
     // MLP LayerNorm
     ln2_weight.push(
@@ -430,7 +430,7 @@ pub fn GPT::GPT(
     for i in 0..<w_proj_data.length() {
       w_proj_data[i] *= residual_scale / 0.02
     }
-    w_proj[w_proj.length() - 1].set_data_in_place(w_proj_data)
+    w_proj[w_proj.length() - 1].assign_parameter_data(w_proj_data)
     b_proj.push(@tensor.Tensor::zeros([n_embd]))
   }
   {

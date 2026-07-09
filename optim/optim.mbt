@@ -8,7 +8,7 @@ pub fn sgd_step(params : Array[@tensor.Tensor], lr : Double) -> Unit {
         for i in 0..<data.length() {
           data[i] -= lr * grad[i]
         }
-        param.set_data_in_place(data)
+        param.assign_parameter_data(data)
       }
       None => ()
     }
@@ -242,7 +242,7 @@ fn AdamW::step_with_gradient_scale(self : AdamW, grad_scale : Double) -> Unit {
           data[i] = data[i] * (1.0 - state.lr * state.weight_decays[pi]) -
             state.lr * m_hat / (v_hat.sqrt() + state.eps)
         }
-        param.set_data_in_place(data)
+        param.assign_parameter_data(data)
       }
       None => ()
     }

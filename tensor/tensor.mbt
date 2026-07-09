@@ -8,7 +8,7 @@ pub fn Tensor::from_array(data : Array[Double], shape : Array[Int]) -> Tensor {
     shape: copy_ints(shape),
     requires_grad: false,
     context: None,
-    node_id: None,
+    node_ref: None,
   }
 }
 
@@ -36,13 +36,13 @@ pub fn Tensor::parameter(
   if data.length() != shape_size(shape) {
     abort("tensor data length does not match shape")
   }
-  let node_id = ctx.push_node(shape, Parameter)
+  let node_ref = ctx.push_parameter(shape)
   {
     data: copy_doubles(data),
     shape: copy_ints(shape),
     requires_grad: true,
     context: Some(ctx),
-    node_id: Some(node_id),
+    node_ref: Some(node_ref),
   }
 }
 
@@ -68,9 +68,9 @@ pub fn Tensor::numel(self : Tensor) -> Int {
 
 ///|
 pub fn Tensor::grad(self : Tensor) -> Tensor? {
-  match (self.context, self.node_id) {
-    (Some(ctx), Some(id)) =>
-      match ctx.node(id).grad {
+  match (self.context, self.node_ref) {
+    (Some(ctx), Some(node_ref)) =>
+      match ctx.grad(node_ref) {
         Some(grad) => Some(Tensor::from_array(grad, self.shape))
         None => None
       }
@@ -83,13 +83,16 @@ pub fn Tensor::backward(self : Tensor) -> Unit {
   if shape_size(self.shape) != 1 {
     abort("backward requires a scalar tensor")
   }
-  match (self.context, self.node_id) {
-    (Some(ctx), Some(id)) => {
+  match (self.context, self.node_ref) {
+    (Some(ctx), Some(node_ref)) => {
       ctx.zero_grad()
-      ctx.add_grad(id, [1.0])
-      let mut i = ctx.state.val.nodes.length() - 1
+      ctx.add_grad(node_ref, [1.0])
+      if ctx.state.val.tape.length() == 0 {
+        return
+      }
+      let mut i = ctx.state.val.tape.length() - 1
       while i >= 0 {
-        match ctx.state.val.nodes[i].grad {
+        match ctx.state.val.tape[i].grad {
           Some(grad) => backward_node(ctx, i, grad)
           None => ()
         }

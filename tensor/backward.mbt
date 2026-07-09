@@ -1,9 +1,7 @@
 ///|
 fn backward_node(ctx : AutogradContext, id : Int, grad : Array[Double]) -> Unit {
-  let node = ctx.node(id)
+  let node = ctx.state.val.tape[id]
   match node.kind {
-    Cleared => ()
-    Parameter => ()
     Add(aid, a_shape, bid, b_shape) => {
       match aid {
         Some(parent) =>

@@ -18,12 +18,11 @@ pub fn AutogradContext::AutogradContext() -> Self
 pub fn AutogradContext::clear_graph(Self) -> Unit
 pub fn AutogradContext::zero_grad(Self) -> Unit
 
-type AutogradState
-
 pub struct Tensor {
   // private fields
 }
 pub fn Tensor::add(Self, Self) -> Self
+pub fn Tensor::assign_parameter_data(Self, Array[Double]) -> Unit
 pub fn Tensor::backward(Self) -> Unit
 pub fn Tensor::cross_entropy(Self, TokenIds) -> Self
 pub fn Tensor::data(Self) -> Array[Double]
@@ -47,7 +46,6 @@ pub fn Tensor::relu(Self) -> Self
 pub fn Tensor::requires_grad(Self) -> Bool
 pub fn Tensor::reshape(Self, Array[Int]) -> Self
 pub fn Tensor::scalar(Double) -> Self
-pub fn Tensor::set_data_in_place(Self, Array[Double]) -> Unit
 pub fn Tensor::shape(Self) -> Array[Int]
 pub fn Tensor::softmax(Self, Int) -> Self
 pub fn Tensor::sub(Self, Self) -> Self

@@ -5,38 +5,65 @@ pub struct AutogradContext {
 }
 
 ///|
-struct AutogradState {
-  nodes : Array[Node]
+priv struct AutogradState {
+  params : Array[ParameterNode]
+  mut tape : Array[TapeNode]
+  mut tape_epoch : Int
 }
 
 ///|
-priv struct Node {
+priv struct ParameterNode {
   shape : Array[Int]
   mut grad : Array[Double]?
-  mut kind : NodeKind
+}
+
+///|
+priv struct TapeNode {
+  shape : Array[Int]
+  mut grad : Array[Double]?
+  kind : NodeKind
+}
+
+///|
+priv enum NodeRef {
+  ParamRef(Int)
+  TapeRef(Int, Int)
 }
 
 ///|
 priv enum NodeKind {
-  Cleared
-  Parameter
-  Add(Int?, Array[Int], Int?, Array[Int])
-  Sub(Int?, Array[Int], Int?, Array[Int])
-  Mul(Int?, Array[Double], Array[Int], Int?, Array[Double], Array[Int])
-  Div(Int?, Array[Double], Array[Int], Int?, Array[Double], Array[Int])
-  Neg(Int?, Array[Int])
-  Sum(Int?, Array[Int])
-  Reshape(Int?, Array[Int])
-  Exp(Int?, Array[Double], Array[Int])
-  Log(Int?, Array[Double], Array[Int])
-  Relu(Int?, Array[Double], Array[Int])
-  Gelu(Int?, Array[Double], Array[Int])
-  SwapAxes(Int?, Array[Int], Int, Int)
-  Matmul(Int?, Array[Double], Array[Int], Int?, Array[Double], Array[Int])
-  Softmax(Int?, Array[Double], Int)
-  LayerNorm(Int?, Array[Double], Array[Int], Int?, Array[Double], Int?, Double)
-  GatherRows(Int?, Array[Int], Array[Int])
-  CrossEntropy(Int?, Array[Double], Array[Int], Array[Int])
+  Add(NodeRef?, Array[Int], NodeRef?, Array[Int])
+  Sub(NodeRef?, Array[Int], NodeRef?, Array[Int])
+  Mul(NodeRef?, Array[Double], Array[Int], NodeRef?, Array[Double], Array[Int])
+  Div(NodeRef?, Array[Double], Array[Int], NodeRef?, Array[Double], Array[Int])
+  Neg(NodeRef?, Array[Int])
+  Sum(NodeRef?, Array[Int])
+  Reshape(NodeRef?, Array[Int])
+  Exp(NodeRef?, Array[Double], Array[Int])
+  Log(NodeRef?, Array[Double], Array[Int])
+  Relu(NodeRef?, Array[Double], Array[Int])
+  Gelu(NodeRef?, Array[Double], Array[Int])
+  SwapAxes(NodeRef?, Array[Int], Int, Int)
+  Matmul(
+    NodeRef?,
+    Array[Double],
+    Array[Int],
+    NodeRef?,
+    Array[Double],
+    Array[Int]
+  )
+  Softmax(NodeRef?, Array[Double], Int)
+  LayerNorm(
+    NodeRef?,
+    Array[Double],
+    Array[Int],
+    NodeRef?,
+    Array[Double],
+    NodeRef?,
+    Double
+  )
+  GatherRows(NodeRef?, Array[Int], Array[Int])
+  CrossEntropy(NodeRef?, Array[Double], Array[Int], Array[Int])
 }
 
 ///|
@@ -45,7 +72,7 @@ pub struct Tensor {
   priv shape : Array[Int]
   priv requires_grad : Bool
   priv context : AutogradContext?
-  priv node_id : Int?
+  priv node_ref : NodeRef?
 }
 
 ///|

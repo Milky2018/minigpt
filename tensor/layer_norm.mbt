@@ -59,15 +59,15 @@ pub fn Tensor::layer_norm(
   if needs_grad {
     match layer_norm_context(self, weight, bias) {
       Some(ctx) => {
-        let node_id = ctx.push_node(
+        let node_ref = ctx.push_tape_node(
           self.shape,
           LayerNorm(
-            grad_parent_id(self),
+            grad_parent_ref(self),
             self.data,
             self.shape,
-            grad_parent_id(weight),
+            grad_parent_ref(weight),
             weight.data,
-            grad_parent_id(bias),
+            grad_parent_ref(bias),
             eps,
           ),
         )
@@ -76,7 +76,7 @@ pub fn Tensor::layer_norm(
           shape: copy_ints(self.shape),
           requires_grad: true,
           context: Some(ctx),
-          node_id: Some(node_id),
+          node_ref: Some(node_ref),
         }
       }
       None =>

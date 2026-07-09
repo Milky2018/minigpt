@@ -19,9 +19,9 @@ pub fn Tensor::gather_rows(self : Tensor, ids : TokenIds) -> Tensor {
     }
   }
   if self.requires_grad {
-    match (self.context, self.node_id) {
+    match (self.context, self.node_ref) {
       (Some(ctx), Some(id)) => {
-        let node_id = ctx.push_node(
+        let node_ref = ctx.push_tape_node(
           out_shape,
           GatherRows(Some(id), id_data, self.shape),
         )
@@ -30,7 +30,7 @@ pub fn Tensor::gather_rows(self : Tensor, ids : TokenIds) -> Tensor {
           shape: out_shape,
           requires_grad: true,
           context: Some(ctx),
-          node_id: Some(node_id),
+          node_ref: Some(node_ref),
         }
       }
       _ => abort("differentiable tensor operation requires an autograd context")
@@ -83,9 +83,9 @@ pub fn Tensor::cross_entropy(self : Tensor, targets : TokenIds) -> Tensor {
   }
   loss = loss / count.to_double()
   if self.requires_grad {
-    match (self.context, self.node_id) {
+    match (self.context, self.node_ref) {
       (Some(ctx), Some(id)) => {
-        let node_id = ctx.push_node(
+        let node_ref = ctx.push_tape_node(
           [],
           CrossEntropy(Some(id), probs, self.shape, target_data),
         )
@@ -94,7 +94,7 @@ pub fn Tensor::cross_entropy(self : Tensor, targets : TokenIds) -> Tensor {
           shape: [],
           requires_grad: true,
           context: Some(ctx),
-          node_id: Some(node_id),
+          node_ref: Some(node_ref),
         }
       }
       _ => abort("differentiable tensor operation requires an autograd context")

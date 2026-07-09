@@ -8,10 +8,10 @@ fn normalize_axis(axis : Int, rank : Int) -> Int {
 }
 
 ///|
-fn grad_parent_id(t : Tensor) -> Int? {
+fn grad_parent_ref(t : Tensor) -> NodeRef? {
   if t.requires_grad {
-    match t.node_id {
-      Some(id) => Some(id)
+    match t.node_ref {
+      Some(node_ref) => Some(node_ref)
       None => abort("requires_grad tensor is missing an autograd node")
     }
   } else {
@@ -24,19 +24,19 @@ fn unary_tensor(
   input : Tensor,
   out_data : Array[Double],
   out_shape : Array[Int],
-  kind : (Int?) -> NodeKind,
+  kind : (NodeRef?) -> NodeKind,
 ) -> Tensor {
   if input.requires_grad {
     match input.context {
       Some(ctx) => {
-        let parent = grad_parent_id(input)
-        let node_id = ctx.push_node(out_shape, kind(parent))
+        let parent = grad_parent_ref(input)
+        let node_ref = ctx.push_tape_node(out_shape, kind(parent))
         {
           data: out_data,
           shape: copy_ints(out_shape),
           requires_grad: true,
           context: Some(ctx),
-          node_id: Some(node_id),
+          node_ref: Some(node_ref),
         }
       }
       None =>

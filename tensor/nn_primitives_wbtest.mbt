@@ -51,9 +51,9 @@ test "cross_entropy passes gradient check" {
 }
 
 ///|
-test "set_data_in_place updates parameter data" {
+test "assign_parameter_data updates parameter data" {
   let ctx = AutogradContext()
   let p = Tensor::parameter(ctx, [1.0, 2.0], [2])
-  p.set_data_in_place([3.0, 4.0])
+  p.assign_parameter_data([3.0, 4.0])
   assert_array_close(p.data(), [3.0, 4.0])
 }

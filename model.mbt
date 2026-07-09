@@ -341,7 +341,7 @@ fn scaled_randn_with_scale(
   for i in 0..<data.length() {
     data[i] *= scale
   }
-  tensor.set_data_in_place(data)
+  tensor.assign_parameter_data(data)
   tensor
 }
 

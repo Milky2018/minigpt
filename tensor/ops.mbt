@@ -33,7 +33,7 @@ fn binary_tensor(
   a : Tensor,
   b : Tensor,
   f : (Double, Double) -> Double,
-  kind : (Int?, Int?, Array[Int]) -> NodeKind,
+  kind : (NodeRef?, NodeRef?, Array[Int]) -> NodeKind,
 ) -> Tensor {
   let out_shape = broadcast_shape(a.shape, b.shape)
   let out_data = binary_data(a, b, out_shape, f)
@@ -42,28 +42,28 @@ fn binary_tensor(
     match result_context(a, b) {
       Some(ctx) => {
         let aid = if a.requires_grad {
-          match a.node_id {
-            Some(id) => Some(id)
+          match a.node_ref {
+            Some(node_ref) => Some(node_ref)
             None => abort("requires_grad tensor is missing an autograd node")
           }
         } else {
           None
         }
         let bid = if b.requires_grad {
-          match b.node_id {
-            Some(id) => Some(id)
+          match b.node_ref {
+            Some(node_ref) => Some(node_ref)
             None => abort("requires_grad tensor is missing an autograd node")
           }
         } else {
           None
         }
-        let node_id = ctx.push_node(out_shape, kind(aid, bid, out_shape))
+        let node_ref = ctx.push_tape_node(out_shape, kind(aid, bid, out_shape))
         {
           data: out_data,
           shape: out_shape,
           requires_grad: true,
           context: Some(ctx),
-          node_id: Some(node_id),
+          node_ref: Some(node_ref),
         }
       }
       None =>
@@ -106,15 +106,15 @@ pub fn Tensor::div(self : Tensor, that : Tensor) -> Tensor {
 pub fn Tensor::neg(self : Tensor) -> Tensor {
   let out_data = self.data.map(x => -x)
   if self.requires_grad {
-    match (self.context, self.node_id) {
+    match (self.context, self.node_ref) {
       (Some(ctx), Some(id)) => {
-        let node_id = ctx.push_node(self.shape, Neg(Some(id), self.shape))
+        let node_ref = ctx.push_tape_node(self.shape, Neg(Some(id), self.shape))
         {
           data: out_data,
           shape: copy_ints(self.shape),
           requires_grad: true,
           context: Some(ctx),
-          node_id: Some(node_id),
+          node_ref: Some(node_ref),
         }
       }
       _ => abort("differentiable tensor operation requires an autograd context")

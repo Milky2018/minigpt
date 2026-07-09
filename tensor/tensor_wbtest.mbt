@@ -94,3 +94,24 @@ test "clear graph preserves parameter node ids" {
     None => abort("expected y gradient")
   }
 }
+
+///|
+test "clear graph drops the temporary tape" {
+  let ctx = AutogradContext()
+  let x = Tensor::parameter(ctx, [2.0], [1])
+  for _ in 0..<3 {
+    let epoch = ctx.state.val.tape_epoch
+    let loss = ((x + Tensor::scalar(1.0)) * Tensor::scalar(2.0)).sum()
+    loss.backward()
+    assert_true(ctx.state.val.tape.length() > 0)
+    ctx.clear_graph()
+    @test.assert_eq(ctx.state.val.tape.length(), 0)
+    @test.assert_eq(ctx.state.val.tape_epoch, epoch + 1)
+    @test.assert_eq(ctx.state.val.params.length(), 1)
+  }
+  (x * Tensor::scalar(3.0)).sum().backward()
+  match x.grad() {
+    Some(g) => assert_array_close(g.data(), [3.0])
+    None => abort("expected x gradient")
+  }
+}

@@ -59,13 +59,13 @@ pub fn Tensor::matmul(self : Tensor, that : Tensor) -> Tensor {
   if needs_grad {
     match result_context(self, that) {
       Some(ctx) => {
-        let node_id = ctx.push_node(
+        let node_ref = ctx.push_tape_node(
           out_shape,
           Matmul(
-            grad_parent_id(self),
+            grad_parent_ref(self),
             self.data,
             self.shape,
-            grad_parent_id(that),
+            grad_parent_ref(that),
             that.data,
             that.shape,
           ),
@@ -75,7 +75,7 @@ pub fn Tensor::matmul(self : Tensor, that : Tensor) -> Tensor {
           shape: out_shape,
           requires_grad: true,
           context: Some(ctx),
-          node_id: Some(node_id),
+          node_ref: Some(node_ref),
         }
       }
       None =>
