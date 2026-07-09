@@ -502,10 +502,10 @@ fn BytesReader::read_bpe_merges(
 ///|
 fn BytesReader::read_training_config(self : BytesReader) -> TrainingConfig {
   TrainingConfig::new(
-    self.read_int_le(),
-    self.read_int_le(),
-    self.read_int_le(),
-    self.read_double_le(),
+    batch_size=self.read_int_le(),
+    block_size=self.read_int_le(),
+    steps=self.read_int_le(),
+    learning_rate=self.read_double_le(),
     min_lr=self.read_double_le(),
     warmup_iters=self.read_int_le(),
     eval_interval=self.read_int_le(),

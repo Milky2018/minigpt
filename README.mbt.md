@@ -143,7 +143,13 @@ moon run --release cmd/main -- train \
 let rng = @random.Rand::new()
 
 ///|
-let config = @minigpt.TrainingConfig::new(4, 8, 20, 0.001, eval_iters=1)
+let config = @minigpt.TrainingConfig::new(
+  batch_size=4,
+  block_size=8,
+  steps=20,
+  learning_rate=0.001,
+  eval_iters=1,
+)
 
 ///|
 let result = @minigpt.train_text(corpus_text, CharacterLevel, config, rng)

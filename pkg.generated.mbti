@@ -76,6 +76,18 @@ pub fn ArchitectureConfig::n_head(Self) -> Int
 pub fn ArchitectureConfig::n_layer(Self) -> Int
 pub fn ArchitectureConfig::new(n_embd? : Int, n_head? : Int, n_layer? : Int) -> Self
 
+pub struct EvalEvent {
+  iter_num : Int
+  train_loss : Double
+  val_loss : Double
+}
+
+pub struct LogEvent {
+  iter_num : Int
+  loss : Double
+  learning_rate : Double
+}
+
 pub struct MiniGPT {
   // private fields
 }
@@ -113,7 +125,7 @@ pub fn SamplingConfig::top_k(Self) -> Int
 pub struct TrainingCallbacks {
   // private fields
 }
-pub fn TrainingCallbacks::new(on_eval? : (Int, Double, Double) -> Unit, on_log? : (Int, Double, Double) -> Unit, on_checkpoint? : (TrainingState) -> Unit) -> Self
+pub fn TrainingCallbacks::new(on_eval? : (EvalEvent) -> Unit, on_log? : (LogEvent) -> Unit, on_checkpoint? : (TrainingState) -> Unit) -> Self
 
 pub struct TrainingCheckpoint {
   // private fields
@@ -138,7 +150,7 @@ pub fn TrainingConfig::learning_rate(Self) -> Double
 pub fn TrainingConfig::learning_rate_at(Self, Int) -> Double
 pub fn TrainingConfig::log_interval(Self) -> Int
 pub fn TrainingConfig::min_lr(Self) -> Double
-pub fn TrainingConfig::new(Int, Int, Int, Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double, always_save_checkpoint? : Bool) -> Self
+pub fn TrainingConfig::new(batch_size~ : Int, block_size~ : Int, steps~ : Int, learning_rate~ : Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double, always_save_checkpoint? : Bool) -> Self
 pub fn TrainingConfig::recommended() -> Self
 pub fn TrainingConfig::steps(Self) -> Int
 pub fn TrainingConfig::warmup_iters(Self) -> Int

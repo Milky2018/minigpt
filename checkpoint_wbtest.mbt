@@ -74,7 +74,13 @@ test "training checkpoint decodes model and tokenizer" {
       optimizer,
       250,
       1.23,
-      TrainingConfig::new(1, 2, 3, 0.001, eval_iters=1),
+      TrainingConfig::new(
+        batch_size=1,
+        block_size=2,
+        steps=3,
+        learning_rate=0.001,
+        eval_iters=1,
+      ),
     ),
   )
   let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)

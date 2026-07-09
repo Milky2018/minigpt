@@ -57,10 +57,10 @@ pub struct TrainingConfig {
 
 ///|
 pub fn TrainingConfig::new(
-  batch_size : Int,
-  block_size : Int,
-  steps : Int,
-  learning_rate : Double,
+  batch_size~ : Int,
+  block_size~ : Int,
+  steps~ : Int,
+  learning_rate~ : Double,
   min_lr? : Double = MIN_LR,
   warmup_iters? : Int = WARMUP_ITERS,
   eval_interval? : Int = EVAL_INTERVAL,
@@ -128,7 +128,12 @@ pub fn TrainingConfig::new(
 
 ///|
 pub fn TrainingConfig::recommended() -> TrainingConfig {
-  TrainingConfig::new(BATCH_SIZE, BLOCK_SIZE, TRAINING_STEPS, LEARNING_RATE)
+  TrainingConfig::new(
+    batch_size=BATCH_SIZE,
+    block_size=BLOCK_SIZE,
+    steps=TRAINING_STEPS,
+    learning_rate=LEARNING_RATE,
+  )
 }
 
 ///|
@@ -288,28 +293,30 @@ pub fn TrainingState::config(self : TrainingState) -> TrainingConfig {
 }
 
 ///|
+pub struct EvalEvent {
+  iter_num : Int
+  train_loss : Double
+  val_loss : Double
+}
+
+///|
+pub struct LogEvent {
+  iter_num : Int
+  loss : Double
+  learning_rate : Double
+}
+
+///|
 pub struct TrainingCallbacks {
-  priv on_eval : (Int, Double, Double) -> Unit
-  priv on_log : (Int, Double, Double) -> Unit
+  priv on_eval : (EvalEvent) -> Unit
+  priv on_log : (LogEvent) -> Unit
   priv on_checkpoint : (TrainingState) -> Unit
 }
 
 ///|
 pub fn TrainingCallbacks::new(
-  on_eval? : (Int, Double, Double) -> Unit = fn(
-    _iter_num,
-    _train_loss,
-    _val_loss,
-  ) {
-    ()
-  },
-  on_log? : (Int, Double, Double) -> Unit = fn(
-    _iter_num,
-    _loss,
-    _learning_rate,
-  ) {
-    ()
-  },
+  on_eval? : (EvalEvent) -> Unit = fn(_event) { () },
+  on_log? : (LogEvent) -> Unit = fn(_event) { () },
   on_checkpoint? : (TrainingState) -> Unit = fn(_state) { () },
 ) -> TrainingCallbacks {
   { on_eval, on_log, on_checkpoint }
@@ -471,7 +478,7 @@ fn train_token_ids_internal(
     if iter_num % config.eval_interval == 0 {
       let train_loss = eval_token_ids(model, train_ids, config, rng)
       let val_loss = eval_token_ids(model, val_ids, config, rng)
-      (callbacks.on_eval)(iter_num, train_loss, val_loss)
+      (callbacks.on_eval)({ iter_num, train_loss, val_loss })
       if initial_eval_loss != initial_eval_loss {
         initial_eval_loss = val_loss
       }
@@ -500,7 +507,7 @@ fn train_token_ids_internal(
     optimizer.step_with_grad_clip(config.grad_clip)
     model.clear_graph()
     if iter_num % config.log_interval == 0 {
-      (callbacks.on_log)(iter_num, loss_value, lr)
+      (callbacks.on_log)({ iter_num, loss: loss_value, learning_rate: lr })
     }
     iter_num += 1
     if iter_num > config.steps {

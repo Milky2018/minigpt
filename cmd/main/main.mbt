@@ -168,10 +168,10 @@ fn bool_value(matches : @argparse.Matches, name : String) -> Bool {
 ///|
 fn training_config(matches : @argparse.Matches) -> @minigpt.TrainingConfig {
   @minigpt.TrainingConfig::new(
-    int_value(matches, "batch-size"),
-    int_value(matches, "block-size"),
-    int_value(matches, "steps"),
-    double_value(matches, "learning-rate"),
+    batch_size=int_value(matches, "batch-size"),
+    block_size=int_value(matches, "block-size"),
+    steps=int_value(matches, "steps"),
+    learning_rate=double_value(matches, "learning-rate"),
     eval_interval=int_value(matches, "eval-interval"),
     eval_iters=int_value(matches, "eval-iters"),
     log_interval=int_value(matches, "log-interval"),
@@ -304,13 +304,15 @@ fn run_train(matches : @argparse.Matches) -> Unit {
     config,
     rng,
     @minigpt.TrainingCallbacks::new(
-      on_eval=fn(iter_num, train_loss, val_loss) {
+      on_eval=fn(event) {
         println(
-          "step \{iter_num}: train loss \{train_loss}, val loss \{val_loss}",
+          "step \{event.iter_num}: train loss \{event.train_loss}, val loss \{event.val_loss}",
         )
       },
-      on_log=fn(iter_num, loss, learning_rate) {
-        println("iter \{iter_num}: loss \{loss}, lr \{learning_rate}")
+      on_log=fn(event) {
+        println(
+          "iter \{event.iter_num}: loss \{event.loss}, lr \{event.learning_rate}",
+        )
       },
       on_checkpoint=fn(state) {
         let checkpoint = @minigpt.encode_training_checkpoint(

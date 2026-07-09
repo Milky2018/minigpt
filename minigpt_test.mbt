@@ -2,10 +2,10 @@
 test "train_text exposes a small library entrypoint" {
   let rng = @random.Rand::new()
   let config = @minigpt.TrainingConfig::new(
-    1,
-    2,
-    0,
-    0.001,
+    batch_size=1,
+    block_size=2,
+    steps=0,
+    learning_rate=0.001,
     eval_iters=1,
     log_interval=100,
   )

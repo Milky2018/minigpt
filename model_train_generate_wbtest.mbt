@@ -39,10 +39,10 @@ test "train_token_ids records one loss per step" {
     [0, 1, 0, 1, 0, 1, 0, 1],
     [0, 1, 0, 1, 0, 1],
     TrainingConfig::new(
-      2,
-      2,
-      3,
-      0.1,
+      batch_size=2,
+      block_size=2,
+      steps=3,
+      learning_rate=0.1,
       eval_interval=100,
       eval_iters=1,
       log_interval=100,
@@ -56,6 +56,63 @@ test "train_token_ids records one loss per step" {
   @test.assert_eq(stats.saved_checkpoints, 0)
   for loss in stats.losses {
     assert_true(loss == loss)
+  }
+}
+
+///|
+test "training callbacks receive named events" {
+  let rng = @random.Rand::new()
+  let model = MiniGPT::new(
+    ModelConfig::new(2, n_embd=6, n_head=3, n_layer=1, block_size=2),
+    rng,
+  )
+  let eval_iters : Array[Int] = []
+  let eval_train_losses : Array[Double] = []
+  let eval_val_losses : Array[Double] = []
+  let log_iters : Array[Int] = []
+  let log_losses : Array[Double] = []
+  let log_lrs : Array[Double] = []
+  let stats = train_token_ids_with_callbacks(
+    model,
+    [0, 1, 0, 1, 0, 1, 0, 1],
+    [0, 1, 0, 1, 0, 1],
+    TrainingConfig::new(
+      batch_size=2,
+      block_size=2,
+      steps=1,
+      learning_rate=0.1,
+      eval_interval=1,
+      eval_iters=1,
+      log_interval=1,
+    ),
+    rng,
+    TrainingCallbacks::new(
+      on_eval=fn(event) {
+        eval_iters.push(event.iter_num)
+        eval_train_losses.push(event.train_loss)
+        eval_val_losses.push(event.val_loss)
+      },
+      on_log=fn(event) {
+        log_iters.push(event.iter_num)
+        log_losses.push(event.loss)
+        log_lrs.push(event.learning_rate)
+      },
+    ),
+  )
+  @test.assert_eq(stats.losses.length(), 2)
+  @test.assert_eq(eval_iters, [0, 1])
+  @test.assert_eq(log_iters, [0, 1])
+  for loss in eval_train_losses {
+    assert_true(loss > 0.0)
+  }
+  for loss in eval_val_losses {
+    assert_true(loss > 0.0)
+  }
+  for loss in log_losses {
+    assert_true(loss > 0.0)
+  }
+  for lr in log_lrs {
+    assert_true(lr > 0.0)
   }
 }
 
