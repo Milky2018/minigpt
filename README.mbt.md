@@ -6,9 +6,7 @@
 
 ## 数据
 
-本仓库自带两份教学语料，方便从源码 checkout 后直接跑 demo。发布到
-Mooncakes 的包会排除 `data/` 和 `docs/`；作为依赖使用时，请准备自己的 UTF-8
-文本文件，并通过 `--data` 传给训练命令。
+本仓库自带两份教学语料，方便从源码 checkout 后直接跑 demo。发布到 Mooncakes 的包会排除 `data/` 和 `docs/`；作为依赖使用时，请准备自己的 UTF-8 文本文件，并通过 `--data` 传给训练命令。
 
 源码仓库里的默认语料文件：
 
@@ -34,15 +32,9 @@ split = first 90% train, last 10% val
 data/recipe_demo.txt
 ```
 
-这个文件以 `habakan/moonbit-gpt-edge-demo` 的 Cooklang-style recipe
-sentences 为种子扩展而来，来源和许可证记录在 `data/RECIPE_DEMO_SOURCE.md`。
-它使用 49 个英文词反复组合，word-level tokenizer 加上换行 token 后 vocab size
-为 50，适合课堂里快速演示“模型如何从短语料中学会菜谱风格补全”，不适合作为
-模型质量 benchmark。
+这个文件以 `habakan/moonbit-gpt-edge-demo` 的 Cooklang-style recipe sentences 为种子扩展而来，来源和许可证记录在 `data/RECIPE_DEMO_SOURCE.md`。它使用 49 个英文词反复组合，word-level tokenizer 加上换行 token 后 vocab size 为 50，适合课堂里快速演示“模型如何从短语料中学会菜谱风格补全”，不适合作为模型质量 benchmark。
 
-菜谱语料可以直接训练。默认 tokenizer 仍然是 `char`，用于对齐 nanoGPT；
-菜谱演示可以显式使用 `--tokenizer word`，让模型一次预测一个英文词；英文长文本
-更推荐尝试 `--tokenizer bpe`，它会从训练语料自动学习子词词表。
+菜谱语料可以直接训练。默认 tokenizer 仍然是 `char`，用于对齐 nanoGPT；菜谱演示可以显式使用 `--tokenizer word`，让模型一次预测一个英文词；英文长文本更推荐尝试 `--tokenizer bpe`，它会从训练语料自动学习子词词表。
 
 ## 训练
 
@@ -205,8 +197,7 @@ moon run --release cmd/main -- generate --model minigpt-model.bin --prompt ROMEO
 
 如果 `minigpt-model.bin` 不存在，先运行上面的 `train` 命令；训练步数太少时可能不会触发 nanoGPT 的保存条件。
 
-每生成一个 token，都会打印当前已经补全出的完整内容；生成长度由
-`--max-new-tokens` 控制：
+每生成一个 token，都会打印当前已经补全出的完整内容；生成长度由 `--max-new-tokens` 控制：
 
 ```text
 completion:
@@ -226,10 +217,7 @@ ROMEO:The
 --temperature     采样温度，默认 0.8
 ```
 
-checkpoint 会保存训练时使用的 tokenizer。字符级 checkpoint 只能编码训练语料
-词表里的字符；word-level checkpoint 只能编码训练语料词表里的词；BPE
-checkpoint 会保存 vocabulary 和 merge rules，可以编码由训练字符集组成的新词。
-默认 Shakespeare 语料不包含中文字符，所以中文 prompt 会被拒绝。
+checkpoint 会保存训练时使用的 tokenizer。字符级 checkpoint 只能编码训练语料词表里的字符；word-level checkpoint 只能编码训练语料词表里的词；BPE checkpoint 会保存 vocabulary 和 merge rules，可以编码由训练字符集组成的新词。默认 Shakespeare 语料不包含中文字符，所以中文 prompt 会被拒绝。
 
 ## Checkpoint 大小
 
@@ -263,9 +251,7 @@ docs/               教学架构图
 data/               Tiny Shakespeare 语料
 ```
 
-Mooncakes 发布包保留根包、`tokenizer/`、`tensor/`、`nn/`、`optim/`、
-`cmd/main/`、测试、README 和 LICENSE；`data/`、`docs/`、agent 协作文档和
-空工具目录只属于源码仓库，不会进入发布包。
+Mooncakes 发布包保留根包、`tokenizer/`、`tensor/`、`nn/`、`optim/`、`cmd/main/`、测试、README 和 LICENSE；`data/`、`docs/`、agent 协作文档和空工具目录只属于源码仓库，不会进入发布包。
 
 ## 验证
 
