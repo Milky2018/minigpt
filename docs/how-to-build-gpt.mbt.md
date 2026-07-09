@@ -161,7 +161,7 @@ minigpt 的 tensor 支持反向模式自动微分。所有可训练参数必须�
 ///|
 /// 自动微分：简单线性回归
 test "autograd: simple backward" {
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   // 可训练参数 w [2,1]
   let w = @tensor.Tensor::parameter(ctx, [1.0, 2.0], [2, 1])
   // 输入 x [1,2]
@@ -183,7 +183,7 @@ test "autograd: simple backward" {
 ///|
 /// 自动微分：清零梯度与清理计算图
 test "autograd: zero_grad and clear_graph" {
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let w = @tensor.Tensor::parameter(ctx, [1.0], [1, 1])
   let x = @tensor.Tensor::from_array([2.0], [1, 1])
   let loss = x.matmul(w) * x.matmul(w)
@@ -205,7 +205,7 @@ test "autograd: zero_grad and clear_graph" {
 ///|
 /// SGD 优化器
 test "optimizer: sgd step" {
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let w = @tensor.Tensor::parameter(ctx, [1.0], [1, 1])
   let x = @tensor.Tensor::from_array([2.0], [1, 1])
   // y = x·w = 2, loss = y² = 4
@@ -225,12 +225,12 @@ test "optimizer: sgd step" {
 ///|
 /// AdamW 优化器
 test "optimizer: adamw basic step" {
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let w = @tensor.Tensor::parameter(ctx, [1.0], [1, 1])
   let x = @tensor.Tensor::from_array([2.0], [1, 1])
   let loss = x.matmul(w) * x.matmul(w)
   loss.backward()
-  let adamw = @optim.AdamW::new([w], @optim.AdamWConfig::new(0.01))
+  let adamw = @optim.AdamW([w], AdamWConfig(0.01))
   adamw.step()
   // 经过一步 AdamW 后，参数应发生变化
   assert_true(w.data()[0] != 1.0)
@@ -348,7 +348,7 @@ fn scaled_randn(
 
 ///|
 /// 创建模型实例
-pub fn GPT::new(
+pub fn GPT::GPT(
   vocab_size : Int,
   n_embd : Int,
   n_head : Int,
@@ -374,7 +374,7 @@ pub fn GPT::new(
   if block_size <= 0 {
     abort("block_size must be positive")
   }
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let mlp_hidden = n_embd * mlp_multiplier
   let residual_scale = 0.02 / (2.0 * n_layer.to_double()).sqrt()
   // 每个 layer 的参数列表
@@ -665,7 +665,7 @@ fn position_ids(
   for i in 0..<count {
     ids.push(i % time)
   }
-  @tensor.TokenIds::new(ids, shape)
+  TokenIds(ids, shape)
 }
 
 ///|
@@ -835,8 +835,8 @@ fn sample_batch(
     }
   }
   (
-    @tensor.TokenIds::new(inputs, [batch_size, block_size]),
-    @tensor.TokenIds::new(targets, [batch_size, block_size]),
+    TokenIds(inputs, [batch_size, block_size]),
+    TokenIds(targets, [batch_size, block_size]),
   )
 }
 ```
@@ -971,9 +971,7 @@ pub fn GPT::generate(
       0
     }
     let context = output[start:].to_owned()
-    let logits = self.last_logits(
-      @tensor.TokenIds::new(context, [context.length()]),
-    )
+    let logits = self.last_logits(TokenIds(context, [context.length()]))
     let next_id = sample_token(logits, rng, 1.0, 0)
     output.push(next_id)
   }
@@ -1031,12 +1029,12 @@ test "e2e: train a tiny GPT and generate text" {
   // 4. 创建模型
   let rng = @random.Rand::new()
   let block_size = 8
-  let model = GPT::new(vocab_size, 8, 2, 1, block_size, rng)
+  let model = GPT(vocab_size, 8, 2, 1, block_size, rng)
 
   // 5. 创建优化器
   let params = model.parameters()
-  let optimizer_config = @optim.AdamWConfig::new(5.0e-3, beta1=0.9, beta2=0.99)
-  let optimizer = @optim.AdamW::new_with_parameter_weight_decays(
+  let optimizer_config = @optim.AdamWConfig(5.0e-3, beta1=0.9, beta2=0.99)
+  let optimizer = @optim.AdamW::with_parameter_weight_decays(
     params,
     optimizer_config,
     model.parameter_weight_decays(0.1),

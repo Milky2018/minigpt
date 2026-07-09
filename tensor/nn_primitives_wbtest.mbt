@@ -1,8 +1,8 @@
 ///|
 test "gather_rows values and gradients" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let weight = Tensor::parameter(ctx, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [3, 2])
-  let ids = TokenIds::new([2, 0, 2], [3])
+  let ids = TokenIds([2, 0, 2], [3])
   let out = weight.gather_rows(ids)
   @test.assert_eq(out.shape(), [3, 2])
   assert_array_close(out.data(), [5.0, 6.0, 1.0, 2.0, 5.0, 6.0])
@@ -15,9 +15,9 @@ test "gather_rows values and gradients" {
 
 ///|
 test "cross_entropy value and gradients" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let logits = Tensor::parameter(ctx, [1.0, 2.0, 3.0, 3.0], [2, 2])
-  let targets = TokenIds::new([1, 0], [2])
+  let targets = TokenIds([1, 0], [2])
   let loss = logits.cross_entropy(targets)
   let expected = (
       @math.ln(@math.exp(1.0) + @math.exp(2.0)) -
@@ -45,14 +45,14 @@ test "cross_entropy value and gradients" {
 test "cross_entropy passes gradient check" {
   assert_true(
     check_grad([0.2, -0.4, 0.7, 1.3, 0.1, -0.8], [2, 3], fn(t) {
-      t.cross_entropy(TokenIds::new([2, 0], [2]))
+      t.cross_entropy(TokenIds([2, 0], [2]))
     }),
   )
 }
 
 ///|
 test "set_data_in_place updates parameter data" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let p = Tensor::parameter(ctx, [1.0, 2.0], [2])
   p.set_data_in_place([3.0, 4.0])
   assert_array_close(p.data(), [3.0, 4.0])

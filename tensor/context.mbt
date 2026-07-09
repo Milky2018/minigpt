@@ -2,7 +2,7 @@
 let next_context_id : Ref[Int] = { val: 0 }
 
 ///|
-pub fn AutogradContext::new() -> AutogradContext {
+pub fn AutogradContext::AutogradContext() -> AutogradContext {
   let id = next_context_id.val
   next_context_id.val = id + 1
   { id, state: { val: { nodes: [] } } }

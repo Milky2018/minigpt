@@ -1,6 +1,6 @@
 ///|
 test "matmul values and gradients" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let a = Tensor::parameter(ctx, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3])
   let b = Tensor::parameter(ctx, [7.0, 8.0, 9.0, 10.0, 11.0, 12.0], [3, 2])
   let c = a.matmul(b)
@@ -20,7 +20,7 @@ test "matmul values and gradients" {
 
 ///|
 test "swap axes and transpose2d propagate gradients" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let x = Tensor::parameter(ctx, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3])
   let y = x.transpose2d()
   @test.assert_eq(y.shape(), [3, 2])
@@ -34,7 +34,7 @@ test "swap axes and transpose2d propagate gradients" {
 
 ///|
 test "exp log relu values and gradients" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let x = Tensor::parameter(ctx, [0.5, 2.0], [2])
   let y = x.log().exp().relu().sum()
   y.backward()
@@ -70,7 +70,7 @@ test "softmax normalizes rows and passes gradient check" {
 
 ///|
 test "layer_norm normalizes last dimension and propagates gradients" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let x = Tensor::parameter(ctx, [1.0, 3.0, 2.0, 4.0], [2, 2])
   let weight = Tensor::parameter(ctx, [2.0, 3.0], [2])
   let bias = Tensor::parameter(ctx, [0.5, -0.5], [2])
@@ -118,7 +118,7 @@ test "matmul passes gradient check" {
 
 ///|
 test "randn creates parameter tensor" {
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let rng = @random.Rand::new()
   let t = Tensor::randn(ctx, [2, 3], rng)
   @test.assert_eq(t.shape(), [2, 3])

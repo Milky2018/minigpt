@@ -104,7 +104,7 @@ pub fn Tensor::backward(self : Tensor) -> Unit {
 }
 
 ///|
-pub fn TokenIds::new(data : Array[Int], shape : Array[Int]) -> TokenIds {
+pub fn TokenIds::TokenIds(data : Array[Int], shape : Array[Int]) -> TokenIds {
   if data.length() != shape_size(shape) {
     abort("token id data length does not match shape")
   }

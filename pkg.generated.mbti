@@ -71,10 +71,10 @@ pub fn train_token_ids_with_callbacks(MiniGPT, Array[Int], Array[Int], TrainingC
 pub struct ArchitectureConfig {
   // private fields
 }
+pub fn ArchitectureConfig::ArchitectureConfig(n_embd? : Int, n_head? : Int, n_layer? : Int) -> Self
 pub fn ArchitectureConfig::n_embd(Self) -> Int
 pub fn ArchitectureConfig::n_head(Self) -> Int
 pub fn ArchitectureConfig::n_layer(Self) -> Int
-pub fn ArchitectureConfig::new(n_embd? : Int, n_head? : Int, n_layer? : Int) -> Self
 
 pub struct EvalEvent {
   iter_num : Int
@@ -91,6 +91,7 @@ pub struct LogEvent {
 pub struct MiniGPT {
   // private fields
 }
+pub fn MiniGPT::MiniGPT(ModelConfig, @random.Rand) -> Self
 pub fn MiniGPT::block_size(Self) -> Int
 pub fn MiniGPT::forward(Self, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::kind_name(Self) -> String
@@ -99,45 +100,45 @@ pub fn MiniGPT::loss(Self, @tensor.TokenIds, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::n_embd(Self) -> Int
 pub fn MiniGPT::n_head(Self) -> Int
 pub fn MiniGPT::n_layer(Self) -> Int
-pub fn MiniGPT::new(ModelConfig, @random.Rand) -> Self
 pub fn MiniGPT::vocab_size(Self) -> Int
 
 pub struct ModelConfig {
   // private fields
 }
+pub fn ModelConfig::ModelConfig(Int, n_embd? : Int, n_head? : Int, n_layer? : Int, block_size? : Int) -> Self
 pub fn ModelConfig::block_size(Self) -> Int
 pub fn ModelConfig::from_architecture(Int, ArchitectureConfig, block_size? : Int) -> Self
 pub fn ModelConfig::n_embd(Self) -> Int
 pub fn ModelConfig::n_head(Self) -> Int
 pub fn ModelConfig::n_layer(Self) -> Int
-pub fn ModelConfig::new(Int, n_embd? : Int, n_head? : Int, n_layer? : Int, block_size? : Int) -> Self
 pub fn ModelConfig::vocab_size(Self) -> Int
 
 pub struct SamplingConfig {
   // private fields
 }
+pub fn SamplingConfig::SamplingConfig(top_k? : Int, temperature? : Double, excluded_id? : Int?, allowed_ids? : Array[Int]?) -> Self
 pub fn SamplingConfig::allowed_ids(Self) -> Array[Int]?
 pub fn SamplingConfig::excluded_id(Self) -> Int?
-pub fn SamplingConfig::new(top_k? : Int, temperature? : Double, excluded_id? : Int?, allowed_ids? : Array[Int]?) -> Self
 pub fn SamplingConfig::temperature(Self) -> Double
 pub fn SamplingConfig::top_k(Self) -> Int
 
 pub struct TrainingCallbacks {
   // private fields
 }
-pub fn TrainingCallbacks::new(on_eval? : (EvalEvent) -> Unit, on_log? : (LogEvent) -> Unit, on_checkpoint? : (TrainingState) -> Unit) -> Self
+pub fn TrainingCallbacks::TrainingCallbacks(on_eval? : (EvalEvent) -> Unit, on_log? : (LogEvent) -> Unit, on_checkpoint? : (TrainingState) -> Unit) -> Self
 
 pub struct TrainingCheckpoint {
   // private fields
 }
+pub fn TrainingCheckpoint::TrainingCheckpoint(MiniGPT, @tokenizer.Tokenizer, @optim.AdamW, Int, Double, TrainingConfig) -> Self
 pub fn TrainingCheckpoint::best_val_loss(Self) -> Double
 pub fn TrainingCheckpoint::from_state(TrainingState, @tokenizer.Tokenizer) -> Self
 pub fn TrainingCheckpoint::iter_num(Self) -> Int
-pub fn TrainingCheckpoint::new(MiniGPT, @tokenizer.Tokenizer, @optim.AdamW, Int, Double, TrainingConfig) -> Self
 
 pub struct TrainingConfig {
   // private fields
 }
+pub fn TrainingConfig::TrainingConfig(batch_size~ : Int, block_size~ : Int, steps~ : Int, learning_rate~ : Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double, always_save_checkpoint? : Bool) -> Self
 pub fn TrainingConfig::always_save_checkpoint(Self) -> Bool
 pub fn TrainingConfig::batch_size(Self) -> Int
 pub fn TrainingConfig::beta1(Self) -> Double
@@ -150,7 +151,6 @@ pub fn TrainingConfig::learning_rate(Self) -> Double
 pub fn TrainingConfig::learning_rate_at(Self, Int) -> Double
 pub fn TrainingConfig::log_interval(Self) -> Int
 pub fn TrainingConfig::min_lr(Self) -> Double
-pub fn TrainingConfig::new(batch_size~ : Int, block_size~ : Int, steps~ : Int, learning_rate~ : Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double, always_save_checkpoint? : Bool) -> Self
 pub fn TrainingConfig::recommended() -> Self
 pub fn TrainingConfig::steps(Self) -> Int
 pub fn TrainingConfig::warmup_iters(Self) -> Int

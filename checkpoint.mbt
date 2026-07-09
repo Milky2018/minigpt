@@ -32,7 +32,7 @@ pub struct TrainingCheckpoint {
 }
 
 ///|
-pub fn TrainingCheckpoint::new(
+pub fn TrainingCheckpoint::TrainingCheckpoint(
   model : MiniGPT,
   tokenizer : @tokenizer.Tokenizer,
   optimizer : @optim.AdamW,
@@ -51,7 +51,7 @@ pub fn TrainingCheckpoint::from_state(
   state : TrainingState,
   tokenizer : @tokenizer.Tokenizer,
 ) -> TrainingCheckpoint {
-  TrainingCheckpoint::new(
+  TrainingCheckpoint(
     state.model(),
     tokenizer,
     state.optimizer(),
@@ -238,7 +238,7 @@ fn encode_checkpoint_data(checkpoint : MiniGPTCheckpoint) -> Bytes {
 
 ///|
 pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
-  let reader = BytesReader::new(bytes)
+  let reader = BytesReader(bytes)
   let magic = reader.read_int_le()
   if magic != CHECKPOINT_MAGIC {
     abort("invalid MiniGPT checkpoint magic")
@@ -384,7 +384,7 @@ priv struct BytesReader {
 }
 
 ///|
-fn BytesReader::new(bytes : Bytes) -> BytesReader {
+fn BytesReader::BytesReader(bytes : Bytes) -> BytesReader {
   { bytes, offset: 0 }
 }
 
@@ -489,11 +489,7 @@ fn BytesReader::read_bpe_merges(
   let merges : Array[@tokenizer.BpeMerge] = []
   for _ in 0..<length {
     merges.push(
-      @tokenizer.BpeMerge::new(
-        self.read_string(),
-        self.read_string(),
-        self.read_string(),
-      ),
+      BpeMerge(self.read_string(), self.read_string(), self.read_string()),
     )
   }
   merges
@@ -501,7 +497,7 @@ fn BytesReader::read_bpe_merges(
 
 ///|
 fn BytesReader::read_training_config(self : BytesReader) -> TrainingConfig {
-  TrainingConfig::new(
+  TrainingConfig(
     batch_size=self.read_int_le(),
     block_size=self.read_int_le(),
     steps=self.read_int_le(),

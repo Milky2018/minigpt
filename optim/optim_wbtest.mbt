@@ -17,7 +17,7 @@ fn assert_array_close(actual : Array[Double], expected : Array[Double]) -> Unit 
 
 ///|
 test "sgd_step updates parameters with gradients" {
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let p = @tensor.Tensor::parameter(ctx, [1.0, 2.0], [2])
   (p * @tensor.Tensor::from_array([2.0, -3.0], [2])).sum().backward()
   sgd_step([p], 0.1)
@@ -26,10 +26,10 @@ test "sgd_step updates parameters with gradients" {
 
 ///|
 test "AdamW step updates parameters and counts steps" {
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let p = @tensor.Tensor::parameter(ctx, [1.0], [1])
   (p * @tensor.Tensor::from_array([2.0], [1])).sum().backward()
-  let opt = AdamW::new([p], AdamWConfig::new(0.1))
+  let opt = AdamW([p], AdamWConfig(0.1))
   opt.step()
   @test.assert_eq(opt.step_count(), 1)
   assert_close(p.data()[0], 0.9000000005)

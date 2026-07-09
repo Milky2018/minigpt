@@ -90,7 +90,7 @@ pub struct ArchitectureConfig {
 }
 
 ///|
-pub fn ArchitectureConfig::new(
+pub fn ArchitectureConfig::ArchitectureConfig(
   n_embd? : Int = N_EMBD,
   n_head? : Int = N_HEAD,
   n_layer? : Int = N_LAYER,
@@ -115,7 +115,7 @@ pub fn ArchitectureConfig::n_layer(self : ArchitectureConfig) -> Int {
 }
 
 ///|
-pub fn ModelConfig::new(
+pub fn ModelConfig::ModelConfig(
   vocab_size : Int,
   n_embd? : Int = N_EMBD,
   n_head? : Int = N_HEAD,
@@ -132,7 +132,7 @@ pub fn ModelConfig::from_architecture(
   architecture : ArchitectureConfig,
   block_size? : Int = BLOCK_SIZE,
 ) -> ModelConfig {
-  ModelConfig::new(
+  ModelConfig(
     vocab_size,
     n_embd=architecture.n_embd,
     n_head=architecture.n_head,
@@ -167,7 +167,7 @@ pub fn ModelConfig::block_size(self : ModelConfig) -> Int {
 }
 
 ///|
-pub fn MiniGPT::new(config : ModelConfig, rng : @random.Rand) -> MiniGPT {
+pub fn MiniGPT::MiniGPT(config : ModelConfig, rng : @random.Rand) -> MiniGPT {
   MiniGPT::init_gpt(
     config.vocab_size,
     config.n_embd,
@@ -188,7 +188,7 @@ fn MiniGPT::init_gpt(
   rng : @random.Rand,
 ) -> MiniGPT {
   validate_transformer_options(vocab_size, n_embd, n_head, n_layer, block_size)
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let mlp_hidden = n_embd * MLP_MULTIPLIER
   let residual_scale = 0.02 / (2.0 * n_layer.to_double()).sqrt()
   {
@@ -243,7 +243,7 @@ fn MiniGPT::from_parameter_data(
   data : MiniGPTParameterData,
 ) -> MiniGPT {
   validate_transformer_options(vocab_size, n_embd, n_head, n_layer, block_size)
-  let ctx = @tensor.AutogradContext::new()
+  let ctx = @tensor.AutogradContext()
   let mlp_hidden = n_embd * MLP_MULTIPLIER
   {
     ctx,
@@ -543,7 +543,7 @@ fn position_ids(
   for i in 0..<count {
     ids.push(i % time)
   }
-  @tensor.TokenIds::new(ids, shape)
+  TokenIds(ids, shape)
 }
 
 ///|

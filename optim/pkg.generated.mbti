@@ -14,13 +14,13 @@ pub fn sgd_step(Array[@tensor.Tensor], Double) -> Unit
 pub struct AdamW {
   // private fields
 }
+pub fn AdamW::AdamW(Array[@tensor.Tensor], AdamWConfig) -> Self
 pub fn AdamW::checkpoint(Self) -> AdamWCheckpoint
-pub fn AdamW::new(Array[@tensor.Tensor], AdamWConfig) -> Self
-pub fn AdamW::new_with_parameter_weight_decays(Array[@tensor.Tensor], AdamWConfig, Array[Double]) -> Self
 pub fn AdamW::set_learning_rate(Self, Double) -> Unit
 pub fn AdamW::step(Self) -> Unit
 pub fn AdamW::step_count(Self) -> Int
 pub fn AdamW::step_with_grad_clip(Self, Double) -> Unit
+pub fn AdamW::with_parameter_weight_decays(Array[@tensor.Tensor], AdamWConfig, Array[Double]) -> Self
 
 pub struct AdamWCheckpoint {
   // private fields
@@ -39,11 +39,11 @@ pub fn AdamWCheckpoint::weight_decays(Self) -> Array[Double]
 pub struct AdamWConfig {
   // private fields
 }
+pub fn AdamWConfig::AdamWConfig(Double, beta1? : Double, beta2? : Double, eps? : Double, weight_decay? : Double) -> Self
 pub fn AdamWConfig::beta1(Self) -> Double
 pub fn AdamWConfig::beta2(Self) -> Double
 pub fn AdamWConfig::eps(Self) -> Double
 pub fn AdamWConfig::lr(Self) -> Double
-pub fn AdamWConfig::new(Double, beta1? : Double, beta2? : Double, eps? : Double, weight_decay? : Double) -> Self
 pub fn AdamWConfig::weight_decay(Self) -> Double
 
 type AdamWState

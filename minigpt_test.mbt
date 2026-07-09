@@ -1,7 +1,7 @@
 ///|
 test "train_text exposes a small library entrypoint" {
   let rng = @random.Rand::new()
-  let config = @minigpt.TrainingConfig::new(
+  let config = @minigpt.TrainingConfig(
     batch_size=1,
     block_size=2,
     steps=0,
@@ -13,7 +13,7 @@ test "train_text exposes a small library entrypoint" {
     "abababababababababababababababababababab",
     CharacterLevel,
     config,
-    @minigpt.ArchitectureConfig::new(n_embd=6, n_head=3, n_layer=1),
+    ArchitectureConfig(n_embd=6, n_head=3, n_layer=1),
     rng,
   )
   @test.assert_eq(result.tokenizer.vocab_size(), 2)

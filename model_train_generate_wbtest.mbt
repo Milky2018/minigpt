@@ -1,12 +1,12 @@
 ///|
 test "MiniGPT forward and loss use next-token shapes" {
   let rng = @random.Rand::new()
-  let model = MiniGPT::new(
-    ModelConfig::new(4, n_embd=12, n_head=3, n_layer=1, block_size=4),
+  let model = MiniGPT(
+    ModelConfig(4, n_embd=12, n_head=3, n_layer=1, block_size=4),
     rng,
   )
-  let inputs = @tensor.TokenIds::new([0, 1, 2, 3], [2, 2])
-  let targets = @tensor.TokenIds::new([1, 2, 3, 0], [2, 2])
+  let inputs = @tensor.TokenIds([0, 1, 2, 3], [2, 2])
+  let targets = @tensor.TokenIds([1, 2, 3, 0], [2, 2])
   @test.assert_eq(model.kind_name(), "gpt-transformer")
   @test.assert_eq(model.n_head(), 3)
   @test.assert_eq(model.n_layer(), 1)
@@ -30,15 +30,15 @@ test "sample_batch returns shifted input and target windows" {
 ///|
 test "train_token_ids records one loss per step" {
   let rng = @random.Rand::new()
-  let model = MiniGPT::new(
-    ModelConfig::new(2, n_embd=6, n_head=3, n_layer=1, block_size=2),
+  let model = MiniGPT(
+    ModelConfig(2, n_embd=6, n_head=3, n_layer=1, block_size=2),
     rng,
   )
   let stats = train_token_ids(
     model,
     [0, 1, 0, 1, 0, 1, 0, 1],
     [0, 1, 0, 1, 0, 1],
-    TrainingConfig::new(
+    TrainingConfig(
       batch_size=2,
       block_size=2,
       steps=3,
@@ -62,8 +62,8 @@ test "train_token_ids records one loss per step" {
 ///|
 test "training callbacks receive named events" {
   let rng = @random.Rand::new()
-  let model = MiniGPT::new(
-    ModelConfig::new(2, n_embd=6, n_head=3, n_layer=1, block_size=2),
+  let model = MiniGPT(
+    ModelConfig(2, n_embd=6, n_head=3, n_layer=1, block_size=2),
     rng,
   )
   let eval_iters : Array[Int] = []
@@ -76,7 +76,7 @@ test "training callbacks receive named events" {
     model,
     [0, 1, 0, 1, 0, 1, 0, 1],
     [0, 1, 0, 1, 0, 1],
-    TrainingConfig::new(
+    TrainingConfig(
       batch_size=2,
       block_size=2,
       steps=1,
@@ -86,7 +86,7 @@ test "training callbacks receive named events" {
       log_interval=1,
     ),
     rng,
-    TrainingCallbacks::new(
+    TrainingCallbacks(
       on_eval=fn(event) {
         eval_iters.push(event.iter_num)
         eval_train_losses.push(event.train_loss)
@@ -138,11 +138,11 @@ test "recommended training config uses public constants" {
 ///|
 test "generate_token_ids extends prompt" {
   let rng = @random.Rand::new()
-  let model = MiniGPT::new(
-    ModelConfig::new(3, n_embd=6, n_head=3, n_layer=1, block_size=4),
+  let model = MiniGPT(
+    ModelConfig(3, n_embd=6, n_head=3, n_layer=1, block_size=4),
     rng,
   )
-  let output = generate_token_ids(model, [0, 1], 4, rng, SamplingConfig::new())
+  let output = generate_token_ids(model, [0, 1], 4, rng, SamplingConfig())
   @test.assert_eq(output.length(), 6)
   @test.assert_eq(output[0:2].to_owned(), [0, 1])
   for id in output {

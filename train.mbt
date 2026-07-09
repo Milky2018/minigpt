@@ -56,7 +56,7 @@ pub struct TrainingConfig {
 }
 
 ///|
-pub fn TrainingConfig::new(
+pub fn TrainingConfig::TrainingConfig(
   batch_size~ : Int,
   block_size~ : Int,
   steps~ : Int,
@@ -128,7 +128,7 @@ pub fn TrainingConfig::new(
 
 ///|
 pub fn TrainingConfig::recommended() -> TrainingConfig {
-  TrainingConfig::new(
+  TrainingConfig(
     batch_size=BATCH_SIZE,
     block_size=BLOCK_SIZE,
     steps=TRAINING_STEPS,
@@ -257,7 +257,7 @@ pub struct TrainingState {
 }
 
 ///|
-fn TrainingState::new(
+fn TrainingState::TrainingState(
   model : MiniGPT,
   optimizer : @optim.AdamW,
   iter_num : Int,
@@ -314,7 +314,7 @@ pub struct TrainingCallbacks {
 }
 
 ///|
-pub fn TrainingCallbacks::new(
+pub fn TrainingCallbacks::TrainingCallbacks(
   on_eval? : (EvalEvent) -> Unit = fn(_event) { () },
   on_log? : (LogEvent) -> Unit = fn(_event) { () },
   on_checkpoint? : (TrainingState) -> Unit = fn(_state) { () },
@@ -349,8 +349,8 @@ fn sample_batch(
     }
   }
   (
-    @tensor.TokenIds::new(inputs, [batch_size, block_size]),
-    @tensor.TokenIds::new(targets, [batch_size, block_size]),
+    TokenIds(inputs, [batch_size, block_size]),
+    TokenIds(targets, [batch_size, block_size]),
   )
 }
 
@@ -389,7 +389,7 @@ pub fn train_token_ids(
     val_ids,
     config,
     rng,
-    TrainingCallbacks::new(),
+    TrainingCallbacks(),
   )
 }
 
@@ -404,7 +404,7 @@ pub fn train_text(
     text,
     tokenizer_config,
     config,
-    ArchitectureConfig::new(),
+    ArchitectureConfig(),
     rng,
   )
 }
@@ -421,7 +421,7 @@ pub fn train_text_with_architecture(
   let tokenizer = dataset.tokenizer()
   let train_ids = dataset.train_ids()
   let val_ids = dataset.val_ids()
-  let model = MiniGPT::new(
+  let model = MiniGPT(
     ModelConfig::from_architecture(
       tokenizer.vocab_size(),
       architecture,
@@ -456,13 +456,13 @@ fn train_token_ids_internal(
 ) -> TrainingStats {
   let losses : Array[Double] = []
   let params = model.parameters()
-  let optimizer_config = @optim.AdamWConfig::new(
+  let optimizer_config = @optim.AdamWConfig(
     config.learning_rate,
     beta1=config.beta1,
     beta2=config.beta2,
     eps=1.0e-8,
   )
-  let optimizer = @optim.AdamW::new_with_parameter_weight_decays(
+  let optimizer = @optim.AdamW::with_parameter_weight_decays(
     params,
     optimizer_config,
     model.parameter_weight_decays(config.weight_decay),
@@ -489,7 +489,7 @@ fn train_token_ids_internal(
       }
       if iter_num > 0 && (improved || config.always_save_checkpoint) {
         (callbacks.on_checkpoint)(
-          TrainingState::new(model, optimizer, iter_num, best_val_loss, config),
+          TrainingState(model, optimizer, iter_num, best_val_loss, config),
         )
         saved_checkpoints += 1
       }

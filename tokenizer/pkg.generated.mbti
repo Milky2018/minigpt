@@ -21,9 +21,9 @@ pub(all) suberror TokenizerError {
 pub struct BpeMerge {
   // private fields
 }
+pub fn BpeMerge::BpeMerge(String, String, String) -> Self
 pub fn BpeMerge::left(Self) -> String
 pub fn BpeMerge::merged(Self) -> String
-pub fn BpeMerge::new(String, String, String) -> Self
 pub fn BpeMerge::right(Self) -> String
 
 pub struct BpeTokenizer {

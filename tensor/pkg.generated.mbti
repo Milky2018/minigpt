@@ -14,8 +14,8 @@ pub fn check_grad(Array[Double], Array[Int], (Tensor) -> Tensor, eps? : Double, 
 pub struct AutogradContext {
   // private fields
 }
+pub fn AutogradContext::AutogradContext() -> Self
 pub fn AutogradContext::clear_graph(Self) -> Unit
-pub fn AutogradContext::new() -> Self
 pub fn AutogradContext::zero_grad(Self) -> Unit
 
 type AutogradState
@@ -64,8 +64,8 @@ pub impl Sub for Tensor
 pub struct TokenIds {
   // private fields
 }
+pub fn TokenIds::TokenIds(Array[Int], Array[Int]) -> Self
 pub fn TokenIds::data(Self) -> Array[Int]
-pub fn TokenIds::new(Array[Int], Array[Int]) -> Self
 pub fn TokenIds::shape(Self) -> Array[Int]
 
 // Type aliases

@@ -68,7 +68,7 @@ fn copy_double_arrays(values : Array[Array[Double]]) -> Array[Array[Double]] {
 }
 
 ///|
-pub fn AdamWConfig::new(
+pub fn AdamWConfig::AdamWConfig(
   lr : Double,
   beta1? : Double = 0.9,
   beta2? : Double = 0.999,
@@ -116,11 +116,11 @@ pub fn AdamWConfig::weight_decay(self : AdamWConfig) -> Double {
 }
 
 ///|
-pub fn AdamW::new(
+pub fn AdamW::AdamW(
   params : Array[@tensor.Tensor],
   config : AdamWConfig,
 ) -> AdamW {
-  AdamW::new_with_parameter_weight_decays(
+  AdamW::with_parameter_weight_decays(
     params,
     config,
     Array::make(params.length(), config.weight_decay),
@@ -128,7 +128,7 @@ pub fn AdamW::new(
 }
 
 ///|
-pub fn AdamW::new_with_parameter_weight_decays(
+pub fn AdamW::with_parameter_weight_decays(
   params : Array[@tensor.Tensor],
   config : AdamWConfig,
   weight_decays : Array[Double],

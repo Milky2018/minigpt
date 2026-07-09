@@ -2,8 +2,8 @@
 test "checkpoint roundtrips tokenizer and model weights" {
   let rng = @random.Rand::new()
   let (tokenizer, _) = @tokenizer.Tokenizer::train_char("ROMEO ROMEO")
-  let model = MiniGPT::new(
-    ModelConfig::new(
+  let model = MiniGPT(
+    ModelConfig(
       tokenizer.vocab_size(),
       n_embd=6,
       n_head=3,
@@ -53,8 +53,8 @@ test "checkpoint roundtrips tokenizer and model weights" {
 test "training checkpoint decodes model and tokenizer" {
   let rng = @random.Rand::new()
   let (tokenizer, _) = @tokenizer.Tokenizer::train_char("ROMEO ROMEO")
-  let model = MiniGPT::new(
-    ModelConfig::new(
+  let model = MiniGPT(
+    ModelConfig(
       tokenizer.vocab_size(),
       n_embd=6,
       n_head=3,
@@ -63,18 +63,15 @@ test "training checkpoint decodes model and tokenizer" {
     ),
     rng,
   )
-  let optimizer = @optim.AdamW::new(
-    model.parameters(),
-    @optim.AdamWConfig::new(0.001),
-  )
+  let optimizer = @optim.AdamW(model.parameters(), AdamWConfig(0.001))
   let bytes = encode_training_checkpoint(
-    TrainingCheckpoint::new(
+    TrainingCheckpoint(
       model,
       tokenizer,
       optimizer,
       250,
       1.23,
-      TrainingConfig::new(
+      TrainingConfig(
         batch_size=1,
         block_size=2,
         steps=3,
@@ -96,8 +93,8 @@ test "checkpoint roundtrips word tokenizer" {
   let (tokenizer, _) = @tokenizer.Tokenizer::train_word(
     "heat olive oil\nheat butter\n",
   )
-  let model = MiniGPT::new(
-    ModelConfig::new(
+  let model = MiniGPT(
+    ModelConfig(
       tokenizer.vocab_size(),
       n_embd=8,
       n_head=2,
@@ -120,8 +117,8 @@ test "checkpoint roundtrips word tokenizer" {
 test "checkpoint roundtrips BPE tokenizer merge rules" {
   let rng = @random.Rand::new()
   let (tokenizer, _) = @tokenizer.Tokenizer::train_bpe("abababab", 4)
-  let model = MiniGPT::new(
-    ModelConfig::new(
+  let model = MiniGPT(
+    ModelConfig(
       tokenizer.vocab_size(),
       n_embd=8,
       n_head=2,

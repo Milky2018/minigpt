@@ -44,7 +44,7 @@ pub struct BpeMerge {
 }
 
 ///|
-pub fn BpeMerge::new(
+pub fn BpeMerge::BpeMerge(
   left : String,
   right : String,
   merged : String,
@@ -201,7 +201,7 @@ fn split_char_tokens(text : String) -> Array[String] {
 
 ///|
 fn join_word_tokens(tokens : Array[String]) -> String {
-  let buf = StringBuilder::new()
+  let buf = StringBuilder()
   let mut needs_space = false
   for token in tokens {
     if token == "\n" {
@@ -369,7 +369,7 @@ pub fn BpeTokenizer::train(
         current = apply_bpe_merge(current, pair.left, pair.right, pair.merged)
         token_to_id[pair.merged] = vocabulary.length()
         vocabulary.push(pair.merged)
-        merges.push(BpeMerge::new(pair.left, pair.right, pair.merged))
+        merges.push(BpeMerge(pair.left, pair.right, pair.merged))
       }
       None => break
     }

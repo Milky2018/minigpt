@@ -143,7 +143,7 @@ moon run --release cmd/main -- train \
 let rng = @random.Rand::new()
 
 ///|
-let config = @minigpt.TrainingConfig::new(
+let config = @minigpt.TrainingConfig(
   batch_size=4,
   block_size=8,
   steps=20,
@@ -164,7 +164,7 @@ let completion = @minigpt.generate_text(
   "ROMEO:",
   40,
   rng,
-  @minigpt.SamplingConfig::new(top_k=50, temperature=0.8),
+  SamplingConfig(top_k=50, temperature=0.8),
 )
 ```
 

@@ -167,7 +167,7 @@ fn bool_value(matches : @argparse.Matches, name : String) -> Bool {
 
 ///|
 fn training_config(matches : @argparse.Matches) -> @minigpt.TrainingConfig {
-  @minigpt.TrainingConfig::new(
+  TrainingConfig(
     batch_size=int_value(matches, "batch-size"),
     block_size=int_value(matches, "block-size"),
     steps=int_value(matches, "steps"),
@@ -236,7 +236,7 @@ fn print_completion_trace(
   }
   println("completion:")
   println(prompt)
-  let sampling_config = @minigpt.SamplingConfig::new(top_k~, temperature~)
+  let sampling_config = @minigpt.SamplingConfig(top_k~, temperature~)
   for _ in 0..<max_new_tokens {
     let next_id = @minigpt.generate_next_token_id(
       model, token_ids, rng, sampling_config,
@@ -282,8 +282,8 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("log interval: \{config.log_interval()}")
   println("always save checkpoint: \{config.always_save_checkpoint()}")
   println("checkpoint: \{out_path}")
-  let model = @minigpt.MiniGPT::new(
-    @minigpt.ModelConfig::new(
+  let model = @minigpt.MiniGPT(
+    ModelConfig(
       tokenizer.vocab_size(),
       n_embd~,
       n_head~,
@@ -303,7 +303,7 @@ fn run_train(matches : @argparse.Matches) -> Unit {
     val_ids,
     config,
     rng,
-    @minigpt.TrainingCallbacks::new(
+    TrainingCallbacks(
       on_eval=fn(event) {
         println(
           "step \{event.iter_num}: train loss \{event.train_loss}, val loss \{event.val_loss}",

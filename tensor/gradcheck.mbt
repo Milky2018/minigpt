@@ -8,7 +8,7 @@ pub fn check_grad(
 ) -> Bool {
   let eps = eps.unwrap_or(1.0e-6)
   let tol = tol.unwrap_or(1.0e-4)
-  let ctx = AutogradContext::new()
+  let ctx = AutogradContext()
   let x = Tensor::parameter(ctx, values, shape)
   let y = f(x)
   y.backward()

@@ -7,7 +7,7 @@ pub struct SamplingConfig {
 }
 
 ///|
-pub fn SamplingConfig::new(
+pub fn SamplingConfig::SamplingConfig(
   top_k? : Int = 0,
   temperature? : Double = 1.0,
   excluded_id? : Int? = None,
@@ -137,9 +137,7 @@ pub fn generate_next_token_id(
     0
   }
   let context = context_ids[start:].to_owned()
-  let last_logits = model.last_logits(
-    @tensor.TokenIds::new(context, [context.length()]),
-  )
+  let last_logits = model.last_logits(TokenIds(context, [context.length()]))
   sample_from_logits(last_logits, rng, config)
 }
 
