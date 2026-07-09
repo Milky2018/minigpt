@@ -180,11 +180,13 @@ fn training_config(matches : @argparse.Matches) -> @minigpt.TrainingConfig {
 }
 
 ///|
-fn parse_tokenizer_kind(matches : @argparse.Matches) -> String {
+fn parse_tokenizer_config(
+  matches : @argparse.Matches,
+) -> @tokenizer.TokenizerConfig {
   match value(matches, "tokenizer") {
-    "char" => "char"
-    "word" => "word"
-    "bpe" => "bpe"
+    "char" => CharacterLevel
+    "word" => WordLevel
+    "bpe" => BpeLevel(int_value(matches, "bpe-vocab-size"))
     other => abort("unsupported tokenizer kind: \{other}")
   }
 }
@@ -192,15 +194,12 @@ fn parse_tokenizer_kind(matches : @argparse.Matches) -> String {
 ///|
 fn load_dataset(
   path : String,
-  tokenizer_kind : String,
-  bpe_vocab_size : Int,
+  config : @tokenizer.TokenizerConfig,
 ) -> @tokenizer.TokenDataset {
   let text = @fs.read_file_to_string(path, encoding="utf8") catch {
     _ => abort("failed to read corpus '\{path}'")
   }
-  @tokenizer.prepare_token_dataset_with_options(
-    text, tokenizer_kind, bpe_vocab_size,
-  )
+  @tokenizer.prepare_token_dataset(text, config)
 }
 
 ///|
@@ -258,20 +257,20 @@ fn print_completion_trace(
 ///|
 fn run_train(matches : @argparse.Matches) -> Unit {
   let data_path = value(matches, "data")
-  let tokenizer_kind = parse_tokenizer_kind(matches)
-  let bpe_vocab_size = int_value(matches, "bpe-vocab-size")
+  let tokenizer_config = parse_tokenizer_config(matches)
   let out_path = value(matches, "out")
   let config = training_config(matches)
   let n_embd = int_value(matches, "n-embd")
   let n_head = int_value(matches, "n-head")
   let n_layer = int_value(matches, "n-layer")
   let rng = @random.Rand::new()
-  let dataset = load_dataset(data_path, tokenizer_kind, bpe_vocab_size)
+  let dataset = load_dataset(data_path, tokenizer_config)
   println("command: train")
   println("data: \{data_path}")
   println("tokenizer: \{dataset.tokenizer.kind_name()}")
-  if tokenizer_kind == "bpe" {
-    println("bpe vocab size: \{bpe_vocab_size}")
+  match tokenizer_config {
+    BpeLevel(vocab_size) => println("bpe vocab size: \{vocab_size}")
+    _ => ()
   }
   println("vocab size: \{dataset.tokenizer.vocab_size()}")
   println("train tokens: \{dataset.train_ids.length()}")

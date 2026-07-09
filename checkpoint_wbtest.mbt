@@ -1,7 +1,7 @@
 ///|
 test "checkpoint roundtrips tokenizer and model weights" {
   let rng = @random.Rand::new()
-  let (tokenizer, _) = @tokenizer.CharTokenizer::train("ROMEO ROMEO")
+  let (tokenizer, _) = @tokenizer.Tokenizer::train_char("ROMEO ROMEO")
   let model = MiniGPT::new_gpt_with_options(
     tokenizer.vocab_size(),
     6,
@@ -10,11 +10,10 @@ test "checkpoint roundtrips tokenizer and model weights" {
     4,
     rng,
   )
-  let packed = @tokenizer.Tokenizer::from_char(tokenizer)
-  let bytes = encode_checkpoint(model, packed)
+  let bytes = encode_checkpoint(model, tokenizer)
   let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
   @test.assert_eq(loaded_tokenizer.kind_name(), "char")
-  @test.assert_eq(loaded_tokenizer.vocabulary(), packed.vocabulary())
+  @test.assert_eq(loaded_tokenizer.vocabulary(), tokenizer.vocabulary())
   @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
   @test.assert_eq(loaded_model.n_embd(), model.n_embd())
   @test.assert_eq(loaded_model.n_head(), model.n_head())
@@ -51,7 +50,7 @@ test "checkpoint roundtrips tokenizer and model weights" {
 ///|
 test "training checkpoint decodes model and tokenizer" {
   let rng = @random.Rand::new()
-  let (tokenizer, _) = @tokenizer.CharTokenizer::train("ROMEO ROMEO")
+  let (tokenizer, _) = @tokenizer.Tokenizer::train_char("ROMEO ROMEO")
   let model = MiniGPT::new_gpt_with_options(
     tokenizer.vocab_size(),
     6,
@@ -61,10 +60,9 @@ test "training checkpoint decodes model and tokenizer" {
     rng,
   )
   let optimizer = @optim.AdamW::new(model.parameters(), 0.001)
-  let packed = @tokenizer.Tokenizer::from_char(tokenizer)
   let bytes = encode_training_checkpoint(
     model,
-    packed,
+    tokenizer,
     optimizer,
     250,
     1.23,
@@ -72,7 +70,7 @@ test "training checkpoint decodes model and tokenizer" {
   )
   let (loaded_model, loaded_tokenizer) = decode_checkpoint(bytes)
   @test.assert_eq(loaded_tokenizer.kind_name(), "char")
-  @test.assert_eq(loaded_tokenizer.vocabulary(), packed.vocabulary())
+  @test.assert_eq(loaded_tokenizer.vocabulary(), tokenizer.vocabulary())
   @test.assert_eq(loaded_model.vocab_size(), model.vocab_size())
   @test.assert_eq(loaded_model.block_size(), model.block_size())
 }
@@ -80,10 +78,9 @@ test "training checkpoint decodes model and tokenizer" {
 ///|
 test "checkpoint roundtrips word tokenizer" {
   let rng = @random.Rand::new()
-  let (word_tokenizer, _) = @tokenizer.WordTokenizer::train(
+  let (tokenizer, _) = @tokenizer.Tokenizer::train_word(
     "heat olive oil\nheat butter\n",
   )
-  let tokenizer = @tokenizer.Tokenizer::from_word(word_tokenizer)
   let model = MiniGPT::new_gpt_with_options(
     tokenizer.vocab_size(),
     8,
@@ -105,8 +102,7 @@ test "checkpoint roundtrips word tokenizer" {
 ///|
 test "checkpoint roundtrips BPE tokenizer merge rules" {
   let rng = @random.Rand::new()
-  let (bpe_tokenizer, _) = @tokenizer.BpeTokenizer::train("abababab", 4)
-  let tokenizer = @tokenizer.Tokenizer::from_bpe(bpe_tokenizer)
+  let (tokenizer, _) = @tokenizer.Tokenizer::train_bpe("abababab", 4)
   let model = MiniGPT::new_gpt_with_options(
     tokenizer.vocab_size(),
     8,

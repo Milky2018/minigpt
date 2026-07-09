@@ -1,14 +1,21 @@
 ///|
-pub const TOKENIZER_KIND_CHAR : String = "char"
+const TOKENIZER_KIND_CHAR : String = "char"
 
 ///|
-pub const TOKENIZER_KIND_WORD : String = "word"
+const TOKENIZER_KIND_WORD : String = "word"
 
 ///|
-pub const TOKENIZER_KIND_BPE : String = "bpe"
+const TOKENIZER_KIND_BPE : String = "bpe"
 
 ///|
 pub const DEFAULT_BPE_VOCAB_SIZE : Int = 512
+
+///|
+pub(all) enum TokenizerConfig {
+  CharacterLevel
+  WordLevel
+  BpeLevel(Int)
+} derive(Eq, Debug)
 
 ///|
 pub(all) suberror TokenizerError {
@@ -513,6 +520,39 @@ pub fn Tokenizer::from_bpe(tokenizer : BpeTokenizer) -> Tokenizer {
 }
 
 ///|
+pub fn Tokenizer::train_char(text : String) -> (Tokenizer, Array[Int]) {
+  let (tokenizer, ids) = CharTokenizer::train(text)
+  (Tokenizer::from_char(tokenizer), ids)
+}
+
+///|
+pub fn Tokenizer::train_word(text : String) -> (Tokenizer, Array[Int]) {
+  let (tokenizer, ids) = WordTokenizer::train(text)
+  (Tokenizer::from_word(tokenizer), ids)
+}
+
+///|
+pub fn Tokenizer::train_bpe(
+  text : String,
+  vocab_size : Int,
+) -> (Tokenizer, Array[Int]) {
+  let (tokenizer, ids) = BpeTokenizer::train(text, vocab_size)
+  (Tokenizer::from_bpe(tokenizer), ids)
+}
+
+///|
+pub fn Tokenizer::train(
+  text : String,
+  config : TokenizerConfig,
+) -> (Tokenizer, Array[Int]) {
+  match config {
+    CharacterLevel => Tokenizer::train_char(text)
+    WordLevel => Tokenizer::train_word(text)
+    BpeLevel(vocab_size) => Tokenizer::train_bpe(text, vocab_size)
+  }
+}
+
+///|
 pub fn Tokenizer::from_kind_and_vocabulary(
   kind : String,
   vocabulary : Array[String],
@@ -653,36 +693,9 @@ pub fn CharTokenizer::decode(
 ///|
 pub fn prepare_token_dataset(
   text : String,
-  tokenizer_kind : String,
+  config : TokenizerConfig,
 ) -> TokenDataset {
-  prepare_token_dataset_with_options(
-    text,
-    tokenizer_kind,
-    DEFAULT_BPE_VOCAB_SIZE,
-  )
-}
-
-///|
-pub fn prepare_token_dataset_with_options(
-  text : String,
-  tokenizer_kind : String,
-  bpe_vocab_size : Int,
-) -> TokenDataset {
-  let (tokenizer, ids) = match tokenizer_kind {
-    "char" => {
-      let (tokenizer, ids) = CharTokenizer::train(text)
-      (Tokenizer::from_char(tokenizer), ids)
-    }
-    "word" => {
-      let (tokenizer, ids) = WordTokenizer::train(text)
-      (Tokenizer::from_word(tokenizer), ids)
-    }
-    "bpe" => {
-      let (tokenizer, ids) = BpeTokenizer::train(text, bpe_vocab_size)
-      (Tokenizer::from_bpe(tokenizer), ids)
-    }
-    _ => abort("unsupported tokenizer kind: \{tokenizer_kind}")
-  }
+  let (tokenizer, ids) = Tokenizer::train(text, config)
   let split = ids.length() * 9 / 10
   {
     tokenizer,

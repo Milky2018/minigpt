@@ -8,15 +8,7 @@ import {
 // Values
 pub const DEFAULT_BPE_VOCAB_SIZE : Int = 512
 
-pub const TOKENIZER_KIND_BPE : String = "bpe"
-
-pub const TOKENIZER_KIND_CHAR : String = "char"
-
-pub const TOKENIZER_KIND_WORD : String = "word"
-
-pub fn prepare_token_dataset(String, String) -> TokenDataset
-
-pub fn prepare_token_dataset_with_options(String, String, Int) -> TokenDataset
+pub fn prepare_token_dataset(String, TokenizerConfig) -> TokenDataset
 
 // Errors
 pub(all) suberror TokenizerError {
@@ -76,8 +68,18 @@ pub fn Tokenizer::from_kind_and_vocabulary(String, Array[String]) -> Self
 pub fn Tokenizer::from_kind_vocabulary_and_merges(String, Array[String], Array[BpeMerge]) -> Self
 pub fn Tokenizer::from_word(WordTokenizer) -> Self
 pub fn Tokenizer::kind_name(Self) -> String
+pub fn Tokenizer::train(String, TokenizerConfig) -> (Self, Array[Int])
+pub fn Tokenizer::train_bpe(String, Int) -> (Self, Array[Int])
+pub fn Tokenizer::train_char(String) -> (Self, Array[Int])
+pub fn Tokenizer::train_word(String) -> (Self, Array[Int])
 pub fn Tokenizer::vocab_size(Self) -> Int
 pub fn Tokenizer::vocabulary(Self) -> Array[String]
+
+pub(all) enum TokenizerConfig {
+  CharacterLevel
+  WordLevel
+  BpeLevel(Int)
+} derive(Eq, @debug.Debug)
 
 pub struct WordTokenizer {
   // private fields

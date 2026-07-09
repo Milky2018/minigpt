@@ -146,12 +146,7 @@ let rng = @random.Rand::new()
 let config = @minigpt.TrainingConfig::new(4, 8, 20, 0.001, eval_iters=1)
 
 ///|
-let result = @minigpt.train_text(
-  corpus_text,
-  @tokenizer.TOKENIZER_KIND_CHAR,
-  config,
-  rng,
-)
+let result = @minigpt.train_text(corpus_text, CharacterLevel, config, rng)
 
 ///|
 let checkpoint = @minigpt.encode_checkpoint(result.model, result.tokenizer)

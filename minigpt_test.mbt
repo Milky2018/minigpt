@@ -11,7 +11,7 @@ test "train_text exposes a small library entrypoint" {
   )
   let result = @minigpt.train_text_with_options(
     "abababababababababababababababababababab",
-    @tokenizer.TOKENIZER_KIND_CHAR,
+    CharacterLevel,
     config,
     6,
     3,

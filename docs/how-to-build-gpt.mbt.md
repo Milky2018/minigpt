@@ -27,8 +27,7 @@ minigpt 提供了三种分词器：字符级（`char`）、词级（`word`）和
 /// 训练一个字符级分词器并编码/解码
 test "tokenizer: char-level train, encode, decode" {
   let text = "hello world! hello moonbit!"
-  let (char_tok, _all_ids) = @tokenizer.CharTokenizer::train(text)
-  let tokenizer = @tokenizer.Tokenizer::from_char(char_tok)
+  let (tokenizer, _all_ids) = @tokenizer.Tokenizer::train_char(text)
   let vocab_size = tokenizer.vocab_size()
   // 字符级词表大小等于文本中不同字符的数量
   assert_true(vocab_size > 0)
@@ -45,8 +44,7 @@ test "tokenizer: char-level train, encode, decode" {
 /// 词级分词器
 test "tokenizer: word-level train, encode, decode" {
   let text = "hello world\nhello moonbit\ngood morning"
-  let (word_tok, _all_ids) = @tokenizer.WordTokenizer::train(text)
-  let tokenizer = @tokenizer.Tokenizer::from_word(word_tok)
+  let (tokenizer, _all_ids) = @tokenizer.Tokenizer::train_word(text)
   // 词级分词器按空白和换行切分
   let encoded = tokenizer.encode("hello world")
   let decoded = tokenizer.decode(encoded)
@@ -61,8 +59,7 @@ test "tokenizer: bpe train, encode, decode" {
   let text =
     #|low low low low low lower lower lower
     #|newest newest newest newest newest newest widest widest widest
-  let (bpe_tok, _all_ids) = @tokenizer.BpeTokenizer::train(text, 32)
-  let tokenizer = @tokenizer.Tokenizer::from_bpe(bpe_tok)
+  let (tokenizer, _all_ids) = @tokenizer.Tokenizer::train_bpe(text, 32)
   // BPE 会把高频组合合并为子词
   let encoded = tokenizer.encode("lowest")
   let decoded = tokenizer.decode(encoded)
@@ -996,8 +993,7 @@ test "e2e: train a tiny GPT and generate text" {
     #|the model generates new text
 
   // 2. 训练字符级分词器
-  let (char_tok, all_ids) = @tokenizer.CharTokenizer::train(text)
-  let tokenizer = @tokenizer.Tokenizer::from_char(char_tok)
+  let (tokenizer, all_ids) = @tokenizer.Tokenizer::train_char(text)
   let vocab_size = tokenizer.vocab_size()
   assert_true(vocab_size > 0)
 
@@ -1067,7 +1063,7 @@ test "e2e: train a tiny GPT and generate text" {
 
 | 章节 | 内容 | 关键 API |
 |------|------|---------|
-| 1 | 分词器 | `CharTokenizer::train`, `Tokenizer::encode/decode` |
+| 1 | 分词器 | `Tokenizer::train_char`, `Tokenizer::encode/decode` |
 | 2 | Tensor 基础 | `from_array`, 四则运算, `matmul`, 形状变换 |
 | 3 | 自动微分 | `AutogradContext`, `parameter`, `backward` |
 | 4 | 优化器 | `sgd_step`, `AdamW::new`, `step_with_grad_clip` |

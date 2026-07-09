@@ -43,10 +43,35 @@ test "character tokenizer rejects invalid token ids" {
 
 ///|
 test "prepare_token_dataset uses nanoGPT split" {
-  let dataset = @tokenizer.prepare_token_dataset("abcdefghij", "char")
+  let dataset = @tokenizer.prepare_token_dataset("abcdefghij", CharacterLevel)
   @test.assert_eq(dataset.train_ids.length(), 9)
   @test.assert_eq(dataset.val_ids.length(), 1)
   @test.assert_eq(dataset.tokenizer.vocab_size(), 10)
+}
+
+///|
+test "Tokenizer train helpers return unified tokenizer" {
+  let (char_tokenizer, char_ids) = @tokenizer.Tokenizer::train_char("abca")
+  @test.assert_eq(char_tokenizer.kind_name(), "char")
+  @test.assert_eq(char_tokenizer.decode(char_ids), "abca")
+  let (word_tokenizer, word_ids) = @tokenizer.Tokenizer::train_word("heat oil")
+  @test.assert_eq(word_tokenizer.kind_name(), "word")
+  @test.assert_eq(word_tokenizer.decode(word_ids), "heat oil")
+  let (bpe_tokenizer, bpe_ids) = @tokenizer.Tokenizer::train_bpe("abababab", 4)
+  @test.assert_eq(bpe_tokenizer.kind_name(), "bpe")
+  @test.assert_eq(bpe_tokenizer.decode(bpe_ids), "abababab")
+  let (generic_tokenizer, generic_ids) = @tokenizer.Tokenizer::train(
+    "abcd",
+    CharacterLevel,
+  )
+  @test.assert_eq(generic_tokenizer.kind_name(), "char")
+  @test.assert_eq(generic_tokenizer.decode(generic_ids), "abcd")
+  let (bpe_config_tokenizer, bpe_config_ids) = @tokenizer.Tokenizer::train(
+    "abababab",
+    BpeLevel(4),
+  )
+  @test.assert_eq(bpe_config_tokenizer.kind_name(), "bpe")
+  @test.assert_eq(bpe_config_tokenizer.decode(bpe_config_ids), "abababab")
 }
 
 ///|
@@ -76,7 +101,10 @@ test "word tokenizer rejects unknown tokens" {
 
 ///|
 test "prepare_token_dataset can use word tokenizer" {
-  let dataset = @tokenizer.prepare_token_dataset("heat oil\nadd salt\n", "word")
+  let dataset = @tokenizer.prepare_token_dataset(
+    "heat oil\nadd salt\n",
+    WordLevel,
+  )
   @test.assert_eq(dataset.tokenizer.kind_name(), "word")
   @test.assert_eq(dataset.tokenizer.vocab_size(), 5)
   @test.assert_eq(dataset.train_ids.length(), 5)
@@ -109,8 +137,9 @@ test "BPE tokenizer rejects unseen characters" {
 
 ///|
 test "prepare_token_dataset can use BPE tokenizer" {
-  let dataset = @tokenizer.prepare_token_dataset_with_options(
-    "abababababababab", "bpe", 4,
+  let dataset = @tokenizer.prepare_token_dataset(
+    "abababababababab",
+    BpeLevel(4),
   )
   @test.assert_eq(dataset.tokenizer.kind_name(), "bpe")
   @test.assert_eq(dataset.tokenizer.vocab_size(), 4)

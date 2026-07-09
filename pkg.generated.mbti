@@ -63,11 +63,9 @@ pub fn generate_token_ids(MiniGPT, Array[Int], Int, @random.Rand) -> Array[Int]
 
 pub fn generate_token_ids_with_sampling_options(MiniGPT, Array[Int], Int, @random.Rand, Array[Int]?) -> Array[Int]
 
-pub fn train_text(String, String, TrainingConfig, @random.Rand) -> TrainingResult
+pub fn train_text(String, @tokenizer.TokenizerConfig, TrainingConfig, @random.Rand) -> TrainingResult
 
-pub fn train_text_with_options(String, String, TrainingConfig, Int, Int, Int, @random.Rand) -> TrainingResult
-
-pub fn train_text_with_tokenizer_options(String, String, Int, TrainingConfig, Int, Int, Int, @random.Rand) -> TrainingResult
+pub fn train_text_with_options(String, @tokenizer.TokenizerConfig, TrainingConfig, Int, Int, Int, @random.Rand) -> TrainingResult
 
 pub fn train_token_ids(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand) -> TrainingStats
 
