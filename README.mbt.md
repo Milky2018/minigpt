@@ -94,29 +94,34 @@ moon run --release cmd/main -- generate \
   --max-new-tokens 8
 ```
 
-菜谱语料的快速训练示例：
+菜谱语料的推荐训练示例：
 
 ```bash
 moon run --release cmd/main -- train \
   --data data/recipe_demo.txt \
   --tokenizer word \
   --out /tmp/minigpt-recipe.bin \
-  --steps 20 \
+  --steps 500 \
   --batch-size 4 \
-  --block-size 16 \
+  --block-size 8 \
   --n-embd 32 \
   --n-head 4 \
-  --n-layer 1 \
-  --eval-interval 5 \
-  --eval-iters 2 \
-  --log-interval 1 \
+  --n-layer 2 \
+  --learning-rate 0.01 \
+  --eval-interval 100 \
+  --eval-iters 4 \
+  --log-interval 100 \
   --always-save-checkpoint true
 
 moon run --release cmd/main -- generate \
   --model /tmp/minigpt-recipe.bin \
   --prompt "heat" \
-  --max-new-tokens 8
+  --max-new-tokens 4 \
+  --top-k 5 \
+  --temperature 1.0
 ```
+
+这组菜谱参数是为了让小语料能学出有效短句，而不是追求 nanoGPT 对齐。实测 2 层、`n_embd=32`、`block_size=8`、`steps=500` 的 checkpoint 大约 630K；生成时 `--top-k 5 --temperature 1.0` 比贪心解码更自然，能减少固定坍缩到同一句的情况。菜谱每行通常只有 4 到 5 个 word token，所以只想补全一句时推荐 `--max-new-tokens 4` 或 `5`。
 
 自动训练 BPE tokenizer 的示例：
 
