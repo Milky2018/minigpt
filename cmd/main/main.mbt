@@ -236,15 +236,10 @@ fn print_completion_trace(
   }
   println("completion:")
   println(prompt)
+  let sampling_config = @minigpt.SamplingConfig::new(top_k~, temperature~)
   for _ in 0..<max_new_tokens {
-    let next_id = @minigpt.generate_next_token_id_from_context_with_sampling_options(
-      model,
-      token_ids,
-      rng,
-      top_k,
-      temperature,
-      None,
-      None,
+    let next_id = @minigpt.generate_next_token_id(
+      model, token_ids, rng, sampling_config,
     )
     token_ids.push(next_id)
     let text = tokenizer.decode(token_ids) catch {
@@ -265,31 +260,36 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   let n_layer = int_value(matches, "n-layer")
   let rng = @random.Rand::new()
   let dataset = load_dataset(data_path, tokenizer_config)
+  let tokenizer = dataset.tokenizer()
+  let train_ids = dataset.train_ids()
+  let val_ids = dataset.val_ids()
   println("command: train")
   println("data: \{data_path}")
-  println("tokenizer: \{dataset.tokenizer.kind_name()}")
+  println("tokenizer: \{tokenizer.kind_name()}")
   match tokenizer_config {
     BpeLevel(vocab_size) => println("bpe vocab size: \{vocab_size}")
     _ => ()
   }
-  println("vocab size: \{dataset.tokenizer.vocab_size()}")
-  println("train tokens: \{dataset.train_ids.length()}")
-  println("val tokens: \{dataset.val_ids.length()}")
-  println("steps: \{config.steps}")
-  println("batch size: \{config.batch_size}")
-  println("block size: \{config.block_size}")
-  println("learning rate: \{config.learning_rate}")
-  println("eval interval: \{config.eval_interval}")
-  println("eval iters: \{config.eval_iters}")
-  println("log interval: \{config.log_interval}")
-  println("always save checkpoint: \{config.always_save_checkpoint}")
+  println("vocab size: \{tokenizer.vocab_size()}")
+  println("train tokens: \{train_ids.length()}")
+  println("val tokens: \{val_ids.length()}")
+  println("steps: \{config.steps()}")
+  println("batch size: \{config.batch_size()}")
+  println("block size: \{config.block_size()}")
+  println("learning rate: \{config.learning_rate()}")
+  println("eval interval: \{config.eval_interval()}")
+  println("eval iters: \{config.eval_iters()}")
+  println("log interval: \{config.log_interval()}")
+  println("always save checkpoint: \{config.always_save_checkpoint()}")
   println("checkpoint: \{out_path}")
-  let model = @minigpt.MiniGPT::new_gpt_with_options(
-    dataset.tokenizer.vocab_size(),
-    n_embd,
-    n_head,
-    n_layer,
-    config.block_size,
+  let model = @minigpt.MiniGPT::new(
+    @minigpt.ModelConfig::new(
+      tokenizer.vocab_size(),
+      n_embd~,
+      n_head~,
+      n_layer~,
+      block_size=config.block_size(),
+    ),
     rng,
   )
   println("model kind: \{model.kind_name()}")
@@ -297,35 +297,32 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("n_head: \{model.n_head()}")
   println("n_layer: \{model.n_layer()}")
   let saved_checkpoints : Ref[Int] = { val: 0 }
-  let stats = @minigpt.train_token_ids_with_progress_callback(
+  let stats = @minigpt.train_token_ids_with_callbacks(
     model,
-    dataset.train_ids,
-    dataset.val_ids,
+    train_ids,
+    val_ids,
     config,
     rng,
-    fn(iter_num, train_loss, val_loss) {
-      println(
-        "step \{iter_num}: train loss \{train_loss}, val loss \{val_loss}",
-      )
-    },
-    fn(iter_num, loss, learning_rate) {
-      println("iter \{iter_num}: loss \{loss}, lr \{learning_rate}")
-    },
-    fn(model, optimizer, iter_num, best_val_loss, config) {
-      let checkpoint = @minigpt.encode_training_checkpoint(
-        model,
-        dataset.tokenizer,
-        optimizer,
-        iter_num,
-        best_val_loss,
-        config,
-      )
-      @fs.write_bytes_to_file(out_path, checkpoint) catch {
-        _ => abort("failed to write checkpoint '\{out_path}'")
-      }
-      saved_checkpoints.val += 1
-      println("saving checkpoint to \{out_path}")
-    },
+    @minigpt.TrainingCallbacks::new(
+      on_eval=fn(iter_num, train_loss, val_loss) {
+        println(
+          "step \{iter_num}: train loss \{train_loss}, val loss \{val_loss}",
+        )
+      },
+      on_log=fn(iter_num, loss, learning_rate) {
+        println("iter \{iter_num}: loss \{loss}, lr \{learning_rate}")
+      },
+      on_checkpoint=fn(state) {
+        let checkpoint = @minigpt.encode_training_checkpoint(
+          @minigpt.TrainingCheckpoint::from_state(state, tokenizer),
+        )
+        @fs.write_bytes_to_file(out_path, checkpoint) catch {
+          _ => abort("failed to write checkpoint '\{out_path}'")
+        }
+        saved_checkpoints.val += 1
+        println("saving checkpoint to \{out_path}")
+      },
+    ),
   )
   print_loss_summary(stats)
   if saved_checkpoints.val == 0 {

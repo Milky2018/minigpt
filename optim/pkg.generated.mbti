@@ -3,7 +3,6 @@ package "Milky2018/minigpt/optim"
 
 import {
   "Milky2018/minigpt/tensor",
-  "moonbitlang/core/ref",
 }
 
 // Values
@@ -13,29 +12,39 @@ pub fn sgd_step(Array[@tensor.Tensor], Double) -> Unit
 
 // Types and methods
 pub struct AdamW {
-  state : @ref.Ref[AdamWState]
+  // private fields
 }
 pub fn AdamW::checkpoint(Self) -> AdamWCheckpoint
-pub fn AdamW::new(Array[@tensor.Tensor], Double) -> Self
-pub fn AdamW::new_with_options(Array[@tensor.Tensor], Double, Double, Double, Double, Double) -> Self
-pub fn AdamW::new_with_parameter_weight_decays(Array[@tensor.Tensor], Double, Double, Double, Double, Array[Double]) -> Self
+pub fn AdamW::new(Array[@tensor.Tensor], AdamWConfig) -> Self
+pub fn AdamW::new_with_parameter_weight_decays(Array[@tensor.Tensor], AdamWConfig, Array[Double]) -> Self
 pub fn AdamW::set_learning_rate(Self, Double) -> Unit
 pub fn AdamW::step(Self) -> Unit
 pub fn AdamW::step_count(Self) -> Int
 pub fn AdamW::step_with_grad_clip(Self, Double) -> Unit
 
 pub struct AdamWCheckpoint {
-  m : Array[Array[Double]]
-  v : Array[Array[Double]]
-  lr : Double
-  beta1 : Double
-  beta2 : Double
-  eps : Double
-  weight_decays : Array[Double]
-  step : Int
-  beta1_power : Double
-  beta2_power : Double
+  // private fields
 }
+pub fn AdamWCheckpoint::beta1(Self) -> Double
+pub fn AdamWCheckpoint::beta1_power(Self) -> Double
+pub fn AdamWCheckpoint::beta2(Self) -> Double
+pub fn AdamWCheckpoint::beta2_power(Self) -> Double
+pub fn AdamWCheckpoint::eps(Self) -> Double
+pub fn AdamWCheckpoint::lr(Self) -> Double
+pub fn AdamWCheckpoint::m(Self) -> Array[Array[Double]]
+pub fn AdamWCheckpoint::step(Self) -> Int
+pub fn AdamWCheckpoint::v(Self) -> Array[Array[Double]]
+pub fn AdamWCheckpoint::weight_decays(Self) -> Array[Double]
+
+pub struct AdamWConfig {
+  // private fields
+}
+pub fn AdamWConfig::beta1(Self) -> Double
+pub fn AdamWConfig::beta2(Self) -> Double
+pub fn AdamWConfig::eps(Self) -> Double
+pub fn AdamWConfig::lr(Self) -> Double
+pub fn AdamWConfig::new(Double, beta1? : Double, beta2? : Double, eps? : Double, weight_decay? : Double) -> Self
+pub fn AdamWConfig::weight_decay(Self) -> Double
 
 type AdamWState
 

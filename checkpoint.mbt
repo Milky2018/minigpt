@@ -2,22 +2,12 @@
 const CHECKPOINT_VERSION : Int = 10
 
 ///|
-const LEGACY_CHAR_CHECKPOINT_VERSION : Int = 8
-
-///|
-const LEGACY_TOKENIZER_CHECKPOINT_VERSION : Int = 9
-
-///|
-const TOKENIZER_MERGES_CHECKPOINT_VERSION : Int = 10
-
-///|
 const CHECKPOINT_MAGIC : Int = 1296649799
 
 ///|
 priv struct MiniGPTCheckpoint {
-  version : Int
-  model_kind : String?
-  tokenizer_kind : String?
+  model_kind : String
+  tokenizer_kind : String
   vocabulary : Array[String]
   bpe_merges : Array[@tokenizer.BpeMerge]
   n_embd : Int
@@ -32,14 +22,63 @@ priv struct MiniGPTCheckpoint {
 }
 
 ///|
+pub struct TrainingCheckpoint {
+  priv model : MiniGPT
+  priv tokenizer : @tokenizer.Tokenizer
+  priv optimizer : @optim.AdamW
+  priv iter_num : Int
+  priv best_val_loss : Double
+  priv config : TrainingConfig
+}
+
+///|
+pub fn TrainingCheckpoint::new(
+  model : MiniGPT,
+  tokenizer : @tokenizer.Tokenizer,
+  optimizer : @optim.AdamW,
+  iter_num : Int,
+  best_val_loss : Double,
+  config : TrainingConfig,
+) -> TrainingCheckpoint {
+  if iter_num < 0 {
+    abort("iter_num must not be negative")
+  }
+  { model, tokenizer, optimizer, iter_num, best_val_loss, config }
+}
+
+///|
+pub fn TrainingCheckpoint::from_state(
+  state : TrainingState,
+  tokenizer : @tokenizer.Tokenizer,
+) -> TrainingCheckpoint {
+  TrainingCheckpoint::new(
+    state.model(),
+    tokenizer,
+    state.optimizer(),
+    state.iter_num(),
+    state.best_val_loss(),
+    state.config(),
+  )
+}
+
+///|
+pub fn TrainingCheckpoint::iter_num(self : TrainingCheckpoint) -> Int {
+  self.iter_num
+}
+
+///|
+pub fn TrainingCheckpoint::best_val_loss(self : TrainingCheckpoint) -> Double {
+  self.best_val_loss
+}
+
+///|
 fn MiniGPTCheckpoint::from_model(
   model : MiniGPT,
   tokenizer : @tokenizer.Tokenizer,
 ) -> MiniGPTCheckpoint {
   {
-    version: CHECKPOINT_VERSION,
-    model_kind: Some(model.kind_name()),
-    tokenizer_kind: Some(tokenizer.kind_name()),
+    model_kind: model.kind_name(),
+    tokenizer_kind: tokenizer.kind_name(),
     vocabulary: tokenizer.vocabulary(),
     bpe_merges: tokenizer.bpe_merges(),
     n_embd: model.n_embd(),
@@ -58,20 +97,11 @@ fn MiniGPTCheckpoint::from_model(
 fn MiniGPTCheckpoint::to_model_and_tokenizer(
   self : MiniGPTCheckpoint,
 ) -> (MiniGPT, @tokenizer.Tokenizer) {
-  if self.version != CHECKPOINT_VERSION &&
-    self.version != LEGACY_TOKENIZER_CHECKPOINT_VERSION &&
-    self.version != LEGACY_CHAR_CHECKPOINT_VERSION {
-    abort("unsupported MiniGPT checkpoint version")
-  }
-  if self.model_kind != Some("gpt-transformer") {
+  if self.model_kind != "gpt-transformer" {
     abort("unsupported MiniGPT checkpoint model kind")
   }
-  let tokenizer_kind = match self.tokenizer_kind {
-    Some(kind) => kind
-    None => abort("missing MiniGPT checkpoint tokenizer kind")
-  }
-  let tokenizer = @tokenizer.Tokenizer::from_kind_vocabulary_and_merges(
-    tokenizer_kind,
+  let tokenizer = tokenizer_from_checkpoint_data(
+    self.tokenizer_kind,
     self.vocabulary,
     self.bpe_merges,
   )
@@ -87,6 +117,46 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
 }
 
 ///|
+fn tokenizer_from_checkpoint_data(
+  kind : String,
+  vocabulary : Array[String],
+  merges : Array[@tokenizer.BpeMerge],
+) -> @tokenizer.Tokenizer {
+  match kind {
+    "char" => {
+      let chars : Array[Char] = []
+      for token in vocabulary {
+        chars.push(single_char_checkpoint_token(token))
+      }
+      @tokenizer.Tokenizer::from_char(
+        @tokenizer.CharTokenizer::from_chars(chars),
+      )
+    }
+    "word" =>
+      @tokenizer.Tokenizer::from_word(
+        @tokenizer.WordTokenizer::from_tokens(vocabulary),
+      )
+    "bpe" =>
+      @tokenizer.Tokenizer::from_bpe(
+        @tokenizer.BpeTokenizer::from_vocabulary_and_merges(vocabulary, merges),
+      )
+    _ => abort("unsupported tokenizer kind: \{kind}")
+  }
+}
+
+///|
+fn single_char_checkpoint_token(text : String) -> Char {
+  let chars : Array[Char] = []
+  for ch in text {
+    chars.push(ch)
+  }
+  if chars.length() != 1 {
+    abort("character tokenizer vocabulary item must contain one character")
+  }
+  chars[0]
+}
+
+///|
 pub fn encode_checkpoint(
   model : MiniGPT,
   tokenizer : @tokenizer.Tokenizer,
@@ -96,21 +166,17 @@ pub fn encode_checkpoint(
 }
 
 ///|
-pub fn encode_training_checkpoint(
-  model : MiniGPT,
-  tokenizer : @tokenizer.Tokenizer,
-  optimizer : @optim.AdamW,
-  iter_num : Int,
-  best_val_loss : Double,
-  config : TrainingConfig,
-) -> Bytes {
-  let checkpoint = MiniGPTCheckpoint::from_model(model, tokenizer)
+pub fn encode_training_checkpoint(checkpoint : TrainingCheckpoint) -> Bytes {
+  let checkpoint_data = MiniGPTCheckpoint::from_model(
+    checkpoint.model,
+    checkpoint.tokenizer,
+  )
   encode_checkpoint_data({
-    ..checkpoint,
-    training_config: Some(config),
-    optimizer: Some(optimizer.checkpoint()),
-    iter_num,
-    best_val_loss,
+    ..checkpoint_data,
+    training_config: Some(checkpoint.config),
+    optimizer: Some(checkpoint.optimizer.checkpoint()),
+    iter_num: checkpoint.iter_num,
+    best_val_loss: checkpoint.best_val_loss,
   })
 }
 
@@ -120,17 +186,17 @@ fn encode_checkpoint_data(checkpoint : MiniGPTCheckpoint) -> Bytes {
   let buffer = Buffer::Buffer()
   buffer.write_int_le(CHECKPOINT_MAGIC)
   buffer.write_int_le(CHECKPOINT_VERSION)
-  write_string(buffer, checkpoint.model_kind.unwrap())
-  write_string(buffer, checkpoint.tokenizer_kind.unwrap())
+  write_string(buffer, checkpoint.model_kind)
+  write_string(buffer, checkpoint.tokenizer_kind)
   buffer.write_int_le(checkpoint.vocabulary.length())
   for token in checkpoint.vocabulary {
     write_string(buffer, token)
   }
   buffer.write_int_le(checkpoint.bpe_merges.length())
   for merge in checkpoint.bpe_merges {
-    write_string(buffer, merge.left)
-    write_string(buffer, merge.right)
-    write_string(buffer, merge.merged)
+    write_string(buffer, merge.left())
+    write_string(buffer, merge.right())
+    write_string(buffer, merge.merged())
   }
   buffer.write_int_le(checkpoint.n_embd)
   buffer.write_int_le(checkpoint.n_head)
@@ -178,9 +244,7 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
     abort("invalid MiniGPT checkpoint magic")
   }
   let version = reader.read_int_le()
-  if version != CHECKPOINT_VERSION &&
-    version != LEGACY_TOKENIZER_CHECKPOINT_VERSION &&
-    version != LEGACY_CHAR_CHECKPOINT_VERSION {
+  if version != CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
   }
   let model_kind = reader.read_string()
@@ -190,12 +254,7 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
   for _ in 0..<vocab_size {
     vocabulary.push(reader.read_string())
   }
-  let bpe_merges : Array[@tokenizer.BpeMerge] = if version >=
-    TOKENIZER_MERGES_CHECKPOINT_VERSION {
-    reader.read_bpe_merges()
-  } else {
-    []
-  }
+  let bpe_merges = reader.read_bpe_merges()
   let n_embd = reader.read_int_le()
   let n_head = reader.read_int_le()
   let n_layer = reader.read_int_le()
@@ -238,9 +297,8 @@ pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
     abort("checkpoint contains trailing bytes")
   }
   let checkpoint : MiniGPTCheckpoint = {
-    version,
-    model_kind: Some(model_kind),
-    tokenizer_kind: Some(tokenizer_kind),
+    model_kind,
+    tokenizer_kind,
     vocabulary,
     bpe_merges,
     n_embd,
@@ -279,16 +337,16 @@ fn write_adamw_checkpoint(
   buffer : Buffer,
   optimizer : @optim.AdamWCheckpoint,
 ) -> Unit {
-  write_double_arrays(buffer, optimizer.m)
-  write_double_arrays(buffer, optimizer.v)
-  buffer.write_double_le(optimizer.lr)
-  buffer.write_double_le(optimizer.beta1)
-  buffer.write_double_le(optimizer.beta2)
-  buffer.write_double_le(optimizer.eps)
-  write_doubles(buffer, optimizer.weight_decays)
-  buffer.write_int_le(optimizer.step)
-  buffer.write_double_le(optimizer.beta1_power)
-  buffer.write_double_le(optimizer.beta2_power)
+  write_double_arrays(buffer, optimizer.m())
+  write_double_arrays(buffer, optimizer.v())
+  buffer.write_double_le(optimizer.lr())
+  buffer.write_double_le(optimizer.beta1())
+  buffer.write_double_le(optimizer.beta2())
+  buffer.write_double_le(optimizer.eps())
+  write_doubles(buffer, optimizer.weight_decays())
+  buffer.write_int_le(optimizer.step())
+  buffer.write_double_le(optimizer.beta1_power())
+  buffer.write_double_le(optimizer.beta2_power())
 }
 
 ///|

@@ -1,7 +1,7 @@
 ///|
 pub struct AutogradContext {
-  id : Int
-  state : Ref[AutogradState]
+  priv id : Int
+  priv state : Ref[AutogradState]
 }
 
 ///|
@@ -41,15 +41,15 @@ priv enum NodeKind {
 
 ///|
 pub struct Tensor {
-  data : Array[Double]
-  shape : Array[Int]
-  requires_grad : Bool
-  context : AutogradContext?
-  node_id : Int?
+  priv data : Array[Double]
+  priv shape : Array[Int]
+  priv requires_grad : Bool
+  priv context : AutogradContext?
+  priv node_id : Int?
 }
 
 ///|
 pub struct TokenIds {
-  data : Array[Int]
-  shape : Array[Int]
+  priv data : Array[Int]
+  priv shape : Array[Int]
 }

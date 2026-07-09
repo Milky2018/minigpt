@@ -154,7 +154,7 @@ _Avoid_: Placing high-level model orchestration in `nn/`
 
 **MiniGPT Public Model**:
 The opaque high-level root-package API that owns the GPT model shape,
-tokenizer-aware training/generation flow, and checkpoint compatibility.
+tokenizer-aware training/generation flow, and checkpoint format.
 _Avoid_: Treating the full MiniGPT model as a low-level `nn/` primitive
 
 **Tokenizer Module**:

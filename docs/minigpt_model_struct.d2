@@ -1,0 +1,95 @@
+title: "MiniGPT struct architecture"
+
+model: "MiniGPT"
+
+model.dimensions: "Shape fields"
+model.runtime: "Runtime state"
+model.embeddings: "Embedding tables"
+model.transformer_layers: "Transformer layer arrays"
+model.final_norm: "Final layer norm"
+model.output_head: "Output head"
+
+model.dimensions: {
+  vocab_size: "vocab_size: Int"
+  n_embd: "n_embd: Int"
+  n_head: "n_head: Int"
+  n_layer: "n_layer: Int"
+  block_size: "block_size: Int"
+  mlp_hidden: "mlp_hidden = n_embd * MLP_MULTIPLIER"
+
+  vocab_size -> n_embd: "token embedding width"
+  block_size -> n_embd: "position embedding width"
+  n_embd -> n_head: "must divide evenly"
+  n_embd -> mlp_hidden
+}
+
+model.runtime: {
+  ctx: "ctx: AutogradContext"
+}
+
+model.embeddings: {
+  token_embedding_table: "token_embedding_table: Tensor\n[vocab_size, n_embd]"
+  position_embedding_table: "position_embedding_table: Tensor\n[block_size, n_embd]"
+}
+
+model.transformer_layers: {
+  label: "Each array has length n_layer"
+
+  pre_attn_norm: "Pre-attention layer norm"
+  attention: "Causal self-attention projections"
+  pre_mlp_norm: "Pre-MLP layer norm"
+  mlp: "MLP projection pair"
+
+  pre_attn_norm: {
+    ln1_weight: "ln1_weight: Array[Tensor]\n[n_embd]"
+    ln1_bias: "ln1_bias: Array[Tensor]\n[n_embd]"
+  }
+
+  attention: {
+    q: "wq: Array[Tensor]\n[n_embd, n_embd]\nbq: Array[Tensor]\n[n_embd]"
+    k: "wk: Array[Tensor]\n[n_embd, n_embd]\nbk: Array[Tensor]\n[n_embd]"
+    v: "wv: Array[Tensor]\n[n_embd, n_embd]\nbv: Array[Tensor]\n[n_embd]"
+    out: "wo: Array[Tensor]\n[n_embd, n_embd]\nbo: Array[Tensor]\n[n_embd]"
+
+    q -> out
+    k -> out
+    v -> out
+  }
+
+  pre_mlp_norm: {
+    ln2_weight: "ln2_weight: Array[Tensor]\n[n_embd]"
+    ln2_bias: "ln2_bias: Array[Tensor]\n[n_embd]"
+  }
+
+  mlp: {
+    fc: "w_fc: Array[Tensor]\n[n_embd, mlp_hidden]\nb_fc: Array[Tensor]\n[mlp_hidden]"
+    proj: "w_proj: Array[Tensor]\n[mlp_hidden, n_embd]\nb_proj: Array[Tensor]\n[n_embd]"
+
+    fc -> proj
+  }
+
+  pre_attn_norm.ln1_weight -> attention.q
+  attention.out -> pre_mlp_norm.ln2_weight
+  pre_mlp_norm.ln2_weight -> mlp.fc
+}
+
+model.final_norm: {
+  ln_f_weight: "ln_f_weight: Tensor\n[n_embd]"
+  ln_f_bias: "ln_f_bias: Tensor\n[n_embd]"
+}
+
+model.output_head: {
+  tied_head: "LM head uses token_embedding_table.transpose2d()"
+  logits: "logits shape\n[..., time, vocab_size]"
+}
+
+model.dimensions.vocab_size -> model.embeddings.token_embedding_table
+model.dimensions.block_size -> model.embeddings.position_embedding_table
+model.dimensions.n_layer -> model.transformer_layers.pre_attn_norm.ln1_weight: "array length"
+model.dimensions.n_layer -> model.transformer_layers.attention.q: "array length"
+model.dimensions.n_layer -> model.transformer_layers.mlp.fc: "array length"
+model.dimensions.n_embd -> model.final_norm.ln_f_weight
+model.dimensions.mlp_hidden -> model.transformer_layers.mlp.fc
+model.embeddings.token_embedding_table -> model.output_head.tied_head: "shared weights"
+model.final_norm.ln_f_weight -> model.output_head.logits
+model.output_head.tied_head -> model.output_head.logits

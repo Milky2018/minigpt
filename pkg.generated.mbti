@@ -49,31 +49,33 @@ pub fn decode_checkpoint(Bytes) -> (MiniGPT, @tokenizer.Tokenizer)
 
 pub fn encode_checkpoint(MiniGPT, @tokenizer.Tokenizer) -> Bytes
 
-pub fn encode_training_checkpoint(MiniGPT, @tokenizer.Tokenizer, @optim.AdamW, Int, Double, TrainingConfig) -> Bytes
+pub fn encode_training_checkpoint(TrainingCheckpoint) -> Bytes
 
-pub fn generate_next_token_id_from_context(MiniGPT, Array[Int], @random.Rand, Int, Int?) -> Int
+pub fn generate_next_token_id(MiniGPT, Array[Int], @random.Rand, SamplingConfig) -> Int
 
-pub fn generate_next_token_id_from_context_with_options(MiniGPT, Array[Int], @random.Rand, Int, Double, Int?) -> Int
+pub fn generate_text(MiniGPT, @tokenizer.Tokenizer, String, Int, @random.Rand, SamplingConfig) -> String raise @tokenizer.TokenizerError
 
-pub fn generate_next_token_id_from_context_with_sampling_options(MiniGPT, Array[Int], @random.Rand, Int, Double, Int?, Array[Int]?) -> Int
-
-pub fn generate_text(MiniGPT, @tokenizer.Tokenizer, String, Int, @random.Rand) -> String raise @tokenizer.TokenizerError
-
-pub fn generate_token_ids(MiniGPT, Array[Int], Int, @random.Rand) -> Array[Int]
-
-pub fn generate_token_ids_with_sampling_options(MiniGPT, Array[Int], Int, @random.Rand, Array[Int]?) -> Array[Int]
+pub fn generate_token_ids(MiniGPT, Array[Int], Int, @random.Rand, SamplingConfig) -> Array[Int]
 
 pub fn train_text(String, @tokenizer.TokenizerConfig, TrainingConfig, @random.Rand) -> TrainingResult
 
-pub fn train_text_with_options(String, @tokenizer.TokenizerConfig, TrainingConfig, Int, Int, Int, @random.Rand) -> TrainingResult
+pub fn train_text_with_architecture(String, @tokenizer.TokenizerConfig, TrainingConfig, ArchitectureConfig, @random.Rand) -> TrainingResult
 
 pub fn train_token_ids(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand) -> TrainingStats
 
-pub fn train_token_ids_with_progress_callback(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand, (Int, Double, Double) -> Unit, (Int, Double, Double) -> Unit, (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit) -> TrainingStats
+pub fn train_token_ids_with_callbacks(MiniGPT, Array[Int], Array[Int], TrainingConfig, @random.Rand, TrainingCallbacks) -> TrainingStats
 
 // Errors
 
 // Types and methods
+pub struct ArchitectureConfig {
+  // private fields
+}
+pub fn ArchitectureConfig::n_embd(Self) -> Int
+pub fn ArchitectureConfig::n_head(Self) -> Int
+pub fn ArchitectureConfig::n_layer(Self) -> Int
+pub fn ArchitectureConfig::new(n_embd? : Int, n_head? : Int, n_layer? : Int) -> Self
+
 pub struct MiniGPT {
   // private fields
 }
@@ -85,37 +87,77 @@ pub fn MiniGPT::loss(Self, @tensor.TokenIds, @tensor.TokenIds) -> @tensor.Tensor
 pub fn MiniGPT::n_embd(Self) -> Int
 pub fn MiniGPT::n_head(Self) -> Int
 pub fn MiniGPT::n_layer(Self) -> Int
-pub fn MiniGPT::new(Int, @random.Rand) -> Self
-pub fn MiniGPT::new_gpt_with_options(Int, Int, Int, Int, Int, @random.Rand) -> Self
-pub fn MiniGPT::new_transformer_with_options(Int, Int, Int, @random.Rand) -> Self
-pub fn MiniGPT::new_with_options(Int, Int, @random.Rand) -> Self
+pub fn MiniGPT::new(ModelConfig, @random.Rand) -> Self
 pub fn MiniGPT::vocab_size(Self) -> Int
 
-pub struct TrainingConfig {
-  batch_size : Int
-  block_size : Int
-  steps : Int
-  learning_rate : Double
-  min_lr : Double
-  warmup_iters : Int
-  eval_interval : Int
-  eval_iters : Int
-  log_interval : Int
-  weight_decay : Double
-  beta1 : Double
-  beta2 : Double
-  grad_clip : Double
-  always_save_checkpoint : Bool
+pub struct ModelConfig {
+  // private fields
 }
+pub fn ModelConfig::block_size(Self) -> Int
+pub fn ModelConfig::from_architecture(Int, ArchitectureConfig, block_size? : Int) -> Self
+pub fn ModelConfig::n_embd(Self) -> Int
+pub fn ModelConfig::n_head(Self) -> Int
+pub fn ModelConfig::n_layer(Self) -> Int
+pub fn ModelConfig::new(Int, n_embd? : Int, n_head? : Int, n_layer? : Int, block_size? : Int) -> Self
+pub fn ModelConfig::vocab_size(Self) -> Int
+
+pub struct SamplingConfig {
+  // private fields
+}
+pub fn SamplingConfig::allowed_ids(Self) -> Array[Int]?
+pub fn SamplingConfig::excluded_id(Self) -> Int?
+pub fn SamplingConfig::new(top_k? : Int, temperature? : Double, excluded_id? : Int?, allowed_ids? : Array[Int]?) -> Self
+pub fn SamplingConfig::temperature(Self) -> Double
+pub fn SamplingConfig::top_k(Self) -> Int
+
+pub struct TrainingCallbacks {
+  // private fields
+}
+pub fn TrainingCallbacks::new(on_eval? : (Int, Double, Double) -> Unit, on_log? : (Int, Double, Double) -> Unit, on_checkpoint? : (TrainingState) -> Unit) -> Self
+
+pub struct TrainingCheckpoint {
+  // private fields
+}
+pub fn TrainingCheckpoint::best_val_loss(Self) -> Double
+pub fn TrainingCheckpoint::from_state(TrainingState, @tokenizer.Tokenizer) -> Self
+pub fn TrainingCheckpoint::iter_num(Self) -> Int
+pub fn TrainingCheckpoint::new(MiniGPT, @tokenizer.Tokenizer, @optim.AdamW, Int, Double, TrainingConfig) -> Self
+
+pub struct TrainingConfig {
+  // private fields
+}
+pub fn TrainingConfig::always_save_checkpoint(Self) -> Bool
+pub fn TrainingConfig::batch_size(Self) -> Int
+pub fn TrainingConfig::beta1(Self) -> Double
+pub fn TrainingConfig::beta2(Self) -> Double
+pub fn TrainingConfig::block_size(Self) -> Int
+pub fn TrainingConfig::eval_interval(Self) -> Int
+pub fn TrainingConfig::eval_iters(Self) -> Int
+pub fn TrainingConfig::grad_clip(Self) -> Double
+pub fn TrainingConfig::learning_rate(Self) -> Double
 pub fn TrainingConfig::learning_rate_at(Self, Int) -> Double
+pub fn TrainingConfig::log_interval(Self) -> Int
+pub fn TrainingConfig::min_lr(Self) -> Double
 pub fn TrainingConfig::new(Int, Int, Int, Double, min_lr? : Double, warmup_iters? : Int, eval_interval? : Int, eval_iters? : Int, log_interval? : Int, weight_decay? : Double, beta1? : Double, beta2? : Double, grad_clip? : Double, always_save_checkpoint? : Bool) -> Self
 pub fn TrainingConfig::recommended() -> Self
+pub fn TrainingConfig::steps(Self) -> Int
+pub fn TrainingConfig::warmup_iters(Self) -> Int
+pub fn TrainingConfig::weight_decay(Self) -> Double
 
 pub struct TrainingResult {
   model : MiniGPT
   tokenizer : @tokenizer.Tokenizer
   stats : TrainingStats
 }
+
+pub struct TrainingState {
+  // private fields
+}
+pub fn TrainingState::best_val_loss(Self) -> Double
+pub fn TrainingState::config(Self) -> TrainingConfig
+pub fn TrainingState::iter_num(Self) -> Int
+pub fn TrainingState::model(Self) -> MiniGPT
+pub fn TrainingState::optimizer(Self) -> @optim.AdamW
 
 pub struct TrainingStats {
   losses : Array[Double]

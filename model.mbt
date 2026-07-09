@@ -74,38 +74,112 @@ pub struct MiniGPT {
 }
 
 ///|
-pub fn MiniGPT::new(vocab_size : Int, rng : @random.Rand) -> MiniGPT {
-  MiniGPT::new_transformer_with_options(vocab_size, N_EMBD, BLOCK_SIZE, rng)
+pub struct ModelConfig {
+  priv vocab_size : Int
+  priv n_embd : Int
+  priv n_head : Int
+  priv n_layer : Int
+  priv block_size : Int
 }
 
 ///|
-pub fn MiniGPT::new_with_options(
-  vocab_size : Int,
-  n_embd : Int,
-  rng : @random.Rand,
-) -> MiniGPT {
-  MiniGPT::new_transformer_with_options(vocab_size, n_embd, BLOCK_SIZE, rng)
+pub struct ArchitectureConfig {
+  priv n_embd : Int
+  priv n_head : Int
+  priv n_layer : Int
 }
 
 ///|
-pub fn MiniGPT::new_transformer_with_options(
+pub fn ArchitectureConfig::new(
+  n_embd? : Int = N_EMBD,
+  n_head? : Int = N_HEAD,
+  n_layer? : Int = N_LAYER,
+) -> ArchitectureConfig {
+  validate_architecture_options(n_embd, n_head, n_layer)
+  { n_embd, n_head, n_layer }
+}
+
+///|
+pub fn ArchitectureConfig::n_embd(self : ArchitectureConfig) -> Int {
+  self.n_embd
+}
+
+///|
+pub fn ArchitectureConfig::n_head(self : ArchitectureConfig) -> Int {
+  self.n_head
+}
+
+///|
+pub fn ArchitectureConfig::n_layer(self : ArchitectureConfig) -> Int {
+  self.n_layer
+}
+
+///|
+pub fn ModelConfig::new(
   vocab_size : Int,
-  n_embd : Int,
-  block_size : Int,
-  rng : @random.Rand,
-) -> MiniGPT {
-  MiniGPT::new_gpt_with_options(
+  n_embd? : Int = N_EMBD,
+  n_head? : Int = N_HEAD,
+  n_layer? : Int = N_LAYER,
+  block_size? : Int = BLOCK_SIZE,
+) -> ModelConfig {
+  validate_transformer_options(vocab_size, n_embd, n_head, n_layer, block_size)
+  { vocab_size, n_embd, n_head, n_layer, block_size }
+}
+
+///|
+pub fn ModelConfig::from_architecture(
+  vocab_size : Int,
+  architecture : ArchitectureConfig,
+  block_size? : Int = BLOCK_SIZE,
+) -> ModelConfig {
+  ModelConfig::new(
     vocab_size,
-    n_embd,
-    N_HEAD,
-    N_LAYER,
-    block_size,
+    n_embd=architecture.n_embd,
+    n_head=architecture.n_head,
+    n_layer=architecture.n_layer,
+    block_size~,
+  )
+}
+
+///|
+pub fn ModelConfig::vocab_size(self : ModelConfig) -> Int {
+  self.vocab_size
+}
+
+///|
+pub fn ModelConfig::n_embd(self : ModelConfig) -> Int {
+  self.n_embd
+}
+
+///|
+pub fn ModelConfig::n_head(self : ModelConfig) -> Int {
+  self.n_head
+}
+
+///|
+pub fn ModelConfig::n_layer(self : ModelConfig) -> Int {
+  self.n_layer
+}
+
+///|
+pub fn ModelConfig::block_size(self : ModelConfig) -> Int {
+  self.block_size
+}
+
+///|
+pub fn MiniGPT::new(config : ModelConfig, rng : @random.Rand) -> MiniGPT {
+  MiniGPT::init_gpt(
+    config.vocab_size,
+    config.n_embd,
+    config.n_head,
+    config.n_layer,
+    config.block_size,
     rng,
   )
 }
 
 ///|
-pub fn MiniGPT::new_gpt_with_options(
+fn MiniGPT::init_gpt(
   vocab_size : Int,
   n_embd : Int,
   n_head : Int,
@@ -220,6 +294,18 @@ fn validate_transformer_options(
   if vocab_size <= 0 {
     abort("vocab_size must be positive")
   }
+  validate_architecture_options(n_embd, n_head, n_layer)
+  if block_size <= 0 {
+    abort("block_size must be positive")
+  }
+}
+
+///|
+fn validate_architecture_options(
+  n_embd : Int,
+  n_head : Int,
+  n_layer : Int,
+) -> Unit {
   if n_embd <= 0 {
     abort("n_embd must be positive")
   }
@@ -231,9 +317,6 @@ fn validate_transformer_options(
   }
   if n_layer <= 0 {
     abort("n_layer must be positive")
-  }
-  if block_size <= 0 {
-    abort("block_size must be positive")
   }
 }
 
@@ -619,7 +702,7 @@ fn MiniGPT::hidden_states(
 }
 
 ///|
-fn MiniGPT::forward_with_options(
+fn MiniGPT::forward_internal(
   self : MiniGPT,
   input_ids : @tensor.TokenIds,
   rng : @random.Rand?,
@@ -634,7 +717,7 @@ pub fn MiniGPT::forward(
   self : MiniGPT,
   input_ids : @tensor.TokenIds,
 ) -> @tensor.Tensor {
-  self.forward_with_options(input_ids, None)
+  self.forward_internal(input_ids, None)
 }
 
 ///|
@@ -643,7 +726,7 @@ fn MiniGPT::forward_train(
   input_ids : @tensor.TokenIds,
   rng : @random.Rand,
 ) -> @tensor.Tensor {
-  self.forward_with_options(input_ids, Some(rng))
+  self.forward_internal(input_ids, Some(rng))
 }
 
 ///|

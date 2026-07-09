@@ -1,31 +1,80 @@
 ///|
-fn sample_from_logits_with_options(
-  logits : @tensor.Tensor,
-  rng : @random.Rand,
-  top_k : Int,
-  temperature : Double,
-  excluded_id : Int?,
-  allowed_ids : Array[Int]?,
-) -> Int {
+pub struct SamplingConfig {
+  priv top_k : Int
+  priv temperature : Double
+  priv excluded_id : Int?
+  priv allowed_ids : Array[Int]?
+}
+
+///|
+pub fn SamplingConfig::new(
+  top_k? : Int = 0,
+  temperature? : Double = 1.0,
+  excluded_id? : Int? = None,
+  allowed_ids? : Array[Int]? = None,
+) -> SamplingConfig {
+  if top_k < 0 {
+    abort("top_k must not be negative")
+  }
   if temperature <= 0.0 {
     abort("temperature must be positive")
   }
+  {
+    top_k,
+    temperature,
+    excluded_id,
+    allowed_ids: match allowed_ids {
+      Some(ids) => Some(ids.copy())
+      None => None
+    },
+  }
+}
+
+///|
+pub fn SamplingConfig::top_k(self : SamplingConfig) -> Int {
+  self.top_k
+}
+
+///|
+pub fn SamplingConfig::temperature(self : SamplingConfig) -> Double {
+  self.temperature
+}
+
+///|
+pub fn SamplingConfig::excluded_id(self : SamplingConfig) -> Int? {
+  self.excluded_id
+}
+
+///|
+pub fn SamplingConfig::allowed_ids(self : SamplingConfig) -> Array[Int]? {
+  match self.allowed_ids {
+    Some(ids) => Some(ids.copy())
+    None => None
+  }
+}
+
+///|
+fn sample_from_logits(
+  logits : @tensor.Tensor,
+  rng : @random.Rand,
+  config : SamplingConfig,
+) -> Int {
   let data = logits.data()
   let order = Array::new(capacity=data.length())
-  match allowed_ids {
+  match config.allowed_ids {
     Some(ids) =>
       for id in ids {
         if id < 0 || id >= data.length() {
           abort("allowed token id out of vocabulary range")
         }
-        match excluded_id {
+        match config.excluded_id {
           Some(excluded) if id == excluded => ()
           _ => order.push(id)
         }
       }
     None =>
       for i in 0..<data.length() {
-        match excluded_id {
+        match config.excluded_id {
           Some(id) if i == id => ()
           _ => order.push(i)
         }
@@ -45,19 +94,19 @@ fn sample_from_logits_with_options(
       1
     }
   })
-  let limit = if top_k <= 0 || top_k > order.length() {
+  let limit = if config.top_k == 0 || config.top_k > order.length() {
     order.length()
   } else {
-    top_k
+    config.top_k
   }
-  let mut max_logit = data[order[0]] / temperature
+  let mut max_logit = data[order[0]] / config.temperature
   for i in 1..<limit {
-    max_logit = max_logit.max(data[order[i]] / temperature)
+    max_logit = max_logit.max(data[order[i]] / config.temperature)
   }
   let probs = Array::make(limit, 0.0)
   let mut sum = 0.0
   for i in 0..<limit {
-    let value = @math.exp(data[order[i]] / temperature - max_logit)
+    let value = @math.exp(data[order[i]] / config.temperature - max_logit)
     probs[i] = value
     sum += value
   }
@@ -73,47 +122,11 @@ fn sample_from_logits_with_options(
 }
 
 ///|
-pub fn generate_next_token_id_from_context(
+pub fn generate_next_token_id(
   model : MiniGPT,
   context_ids : Array[Int],
   rng : @random.Rand,
-  top_k : Int,
-  excluded_id : Int?,
-) -> Int {
-  generate_next_token_id_from_context_with_options(
-    model, context_ids, rng, top_k, 1.0, excluded_id,
-  )
-}
-
-///|
-pub fn generate_next_token_id_from_context_with_options(
-  model : MiniGPT,
-  context_ids : Array[Int],
-  rng : @random.Rand,
-  top_k : Int,
-  temperature : Double,
-  excluded_id : Int?,
-) -> Int {
-  generate_next_token_id_from_context_with_sampling_options(
-    model,
-    context_ids,
-    rng,
-    top_k,
-    temperature,
-    excluded_id,
-    None,
-  )
-}
-
-///|
-pub fn generate_next_token_id_from_context_with_sampling_options(
-  model : MiniGPT,
-  context_ids : Array[Int],
-  rng : @random.Rand,
-  top_k : Int,
-  temperature : Double,
-  excluded_id : Int?,
-  allowed_ids : Array[Int]?,
+  config : SamplingConfig,
 ) -> Int {
   if context_ids.length() == 0 {
     abort("context_ids must not be empty")
@@ -127,9 +140,7 @@ pub fn generate_next_token_id_from_context_with_sampling_options(
   let last_logits = model.last_logits(
     @tensor.TokenIds::new(context, [context.length()]),
   )
-  sample_from_logits_with_options(
-    last_logits, rng, top_k, temperature, excluded_id, allowed_ids,
-  )
+  sample_from_logits(last_logits, rng, config)
 }
 
 ///|
@@ -138,23 +149,7 @@ pub fn generate_token_ids(
   prompt_ids : Array[Int],
   max_new_tokens : Int,
   rng : @random.Rand,
-) -> Array[Int] {
-  generate_token_ids_with_sampling_options(
-    model,
-    prompt_ids,
-    max_new_tokens,
-    rng,
-    None,
-  )
-}
-
-///|
-pub fn generate_token_ids_with_sampling_options(
-  model : MiniGPT,
-  prompt_ids : Array[Int],
-  max_new_tokens : Int,
-  rng : @random.Rand,
-  allowed_ids : Array[Int]?,
+  config : SamplingConfig,
 ) -> Array[Int] {
   if prompt_ids.length() == 0 {
     abort("prompt_ids must not be empty")
@@ -164,17 +159,7 @@ pub fn generate_token_ids_with_sampling_options(
   }
   let output = prompt_ids.copy()
   for _ in 0..<max_new_tokens {
-    output.push(
-      generate_next_token_id_from_context_with_sampling_options(
-        model,
-        output,
-        rng,
-        0,
-        1.0,
-        None,
-        allowed_ids,
-      ),
-    )
+    output.push(generate_next_token_id(model, output, rng, config))
   }
   output
 }
@@ -186,7 +171,10 @@ pub fn generate_text(
   prompt : String,
   max_new_tokens : Int,
   rng : @random.Rand,
+  config : SamplingConfig,
 ) -> String raise @tokenizer.TokenizerError {
   let prompt_ids = tokenizer.encode(prompt)
-  tokenizer.decode(generate_token_ids(model, prompt_ids, max_new_tokens, rng))
+  tokenizer.decode(
+    generate_token_ids(model, prompt_ids, max_new_tokens, rng, config),
+  )
 }

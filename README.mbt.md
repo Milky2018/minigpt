@@ -158,6 +158,7 @@ let completion = @minigpt.generate_text(
   "ROMEO:",
   40,
   rng,
+  @minigpt.SamplingConfig::new(top_k=50, temperature=0.8),
 )
 ```
 

@@ -44,9 +44,9 @@ test "character tokenizer rejects invalid token ids" {
 ///|
 test "prepare_token_dataset uses nanoGPT split" {
   let dataset = @tokenizer.prepare_token_dataset("abcdefghij", CharacterLevel)
-  @test.assert_eq(dataset.train_ids.length(), 9)
-  @test.assert_eq(dataset.val_ids.length(), 1)
-  @test.assert_eq(dataset.tokenizer.vocab_size(), 10)
+  @test.assert_eq(dataset.train_ids().length(), 9)
+  @test.assert_eq(dataset.val_ids().length(), 1)
+  @test.assert_eq(dataset.tokenizer().vocab_size(), 10)
 }
 
 ///|
@@ -105,10 +105,10 @@ test "prepare_token_dataset can use word tokenizer" {
     "heat oil\nadd salt\n",
     WordLevel,
   )
-  @test.assert_eq(dataset.tokenizer.kind_name(), "word")
-  @test.assert_eq(dataset.tokenizer.vocab_size(), 5)
-  @test.assert_eq(dataset.train_ids.length(), 5)
-  @test.assert_eq(dataset.val_ids.length(), 1)
+  @test.assert_eq(dataset.tokenizer().kind_name(), "word")
+  @test.assert_eq(dataset.tokenizer().vocab_size(), 5)
+  @test.assert_eq(dataset.train_ids().length(), 5)
+  @test.assert_eq(dataset.val_ids().length(), 1)
 }
 
 ///|
@@ -141,8 +141,8 @@ test "prepare_token_dataset can use BPE tokenizer" {
     "abababababababab",
     BpeLevel(4),
   )
-  @test.assert_eq(dataset.tokenizer.kind_name(), "bpe")
-  @test.assert_eq(dataset.tokenizer.vocab_size(), 4)
-  @test.assert_eq(dataset.train_ids.length(), 3)
-  @test.assert_eq(dataset.val_ids.length(), 1)
+  @test.assert_eq(dataset.tokenizer().kind_name(), "bpe")
+  @test.assert_eq(dataset.tokenizer().vocab_size(), 4)
+  @test.assert_eq(dataset.train_ids().length(), 3)
+  @test.assert_eq(dataset.val_ids().length(), 1)
 }

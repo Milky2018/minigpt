@@ -9,13 +9,11 @@ test "train_text exposes a small library entrypoint" {
     eval_iters=1,
     log_interval=100,
   )
-  let result = @minigpt.train_text_with_options(
+  let result = @minigpt.train_text_with_architecture(
     "abababababababababababababababababababab",
     CharacterLevel,
     config,
-    6,
-    3,
-    1,
+    @minigpt.ArchitectureConfig::new(n_embd=6, n_head=3, n_layer=1),
     rng,
   )
   @test.assert_eq(result.tokenizer.vocab_size(), 2)

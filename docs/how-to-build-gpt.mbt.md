@@ -230,7 +230,7 @@ test "optimizer: adamw basic step" {
   let x = @tensor.Tensor::from_array([2.0], [1, 1])
   let loss = x.matmul(w) * x.matmul(w)
   loss.backward()
-  let adamw = @optim.AdamW::new([w], 0.01)
+  let adamw = @optim.AdamW::new([w], @optim.AdamWConfig::new(0.01))
   adamw.step()
   // 经过一步 AdamW 后，参数应发生变化
   assert_true(w.data()[0] != 1.0)
@@ -1009,12 +1009,10 @@ test "e2e: train a tiny GPT and generate text" {
 
   // 5. 创建优化器
   let params = model.parameters()
+  let optimizer_config = @optim.AdamWConfig::new(5.0e-3, beta1=0.9, beta2=0.99)
   let optimizer = @optim.AdamW::new_with_parameter_weight_decays(
     params,
-    5.0e-3,
-    0.9,
-    0.99,
-    1.0e-8,
+    optimizer_config,
     model.parameter_weight_decays(0.1),
   )
 

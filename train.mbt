@@ -39,20 +39,20 @@ pub const GRAD_CLIP : Double = 1.0
 
 ///|
 pub struct TrainingConfig {
-  batch_size : Int
-  block_size : Int
-  steps : Int
-  learning_rate : Double
-  min_lr : Double
-  warmup_iters : Int
-  eval_interval : Int
-  eval_iters : Int
-  log_interval : Int
-  weight_decay : Double
-  beta1 : Double
-  beta2 : Double
-  grad_clip : Double
-  always_save_checkpoint : Bool
+  priv batch_size : Int
+  priv block_size : Int
+  priv steps : Int
+  priv learning_rate : Double
+  priv min_lr : Double
+  priv warmup_iters : Int
+  priv eval_interval : Int
+  priv eval_iters : Int
+  priv log_interval : Int
+  priv weight_decay : Double
+  priv beta1 : Double
+  priv beta2 : Double
+  priv grad_clip : Double
+  priv always_save_checkpoint : Bool
 }
 
 ///|
@@ -132,6 +132,76 @@ pub fn TrainingConfig::recommended() -> TrainingConfig {
 }
 
 ///|
+pub fn TrainingConfig::batch_size(self : TrainingConfig) -> Int {
+  self.batch_size
+}
+
+///|
+pub fn TrainingConfig::block_size(self : TrainingConfig) -> Int {
+  self.block_size
+}
+
+///|
+pub fn TrainingConfig::steps(self : TrainingConfig) -> Int {
+  self.steps
+}
+
+///|
+pub fn TrainingConfig::learning_rate(self : TrainingConfig) -> Double {
+  self.learning_rate
+}
+
+///|
+pub fn TrainingConfig::min_lr(self : TrainingConfig) -> Double {
+  self.min_lr
+}
+
+///|
+pub fn TrainingConfig::warmup_iters(self : TrainingConfig) -> Int {
+  self.warmup_iters
+}
+
+///|
+pub fn TrainingConfig::eval_interval(self : TrainingConfig) -> Int {
+  self.eval_interval
+}
+
+///|
+pub fn TrainingConfig::eval_iters(self : TrainingConfig) -> Int {
+  self.eval_iters
+}
+
+///|
+pub fn TrainingConfig::log_interval(self : TrainingConfig) -> Int {
+  self.log_interval
+}
+
+///|
+pub fn TrainingConfig::weight_decay(self : TrainingConfig) -> Double {
+  self.weight_decay
+}
+
+///|
+pub fn TrainingConfig::beta1(self : TrainingConfig) -> Double {
+  self.beta1
+}
+
+///|
+pub fn TrainingConfig::beta2(self : TrainingConfig) -> Double {
+  self.beta2
+}
+
+///|
+pub fn TrainingConfig::grad_clip(self : TrainingConfig) -> Double {
+  self.grad_clip
+}
+
+///|
+pub fn TrainingConfig::always_save_checkpoint(self : TrainingConfig) -> Bool {
+  self.always_save_checkpoint
+}
+
+///|
 pub fn TrainingConfig::learning_rate_at(
   self : TrainingConfig,
   iter : Int,
@@ -170,6 +240,79 @@ pub struct TrainingResult {
   model : MiniGPT
   tokenizer : @tokenizer.Tokenizer
   stats : TrainingStats
+}
+
+///|
+pub struct TrainingState {
+  priv model : MiniGPT
+  priv optimizer : @optim.AdamW
+  priv iter_num : Int
+  priv best_val_loss : Double
+  priv config : TrainingConfig
+}
+
+///|
+fn TrainingState::new(
+  model : MiniGPT,
+  optimizer : @optim.AdamW,
+  iter_num : Int,
+  best_val_loss : Double,
+  config : TrainingConfig,
+) -> TrainingState {
+  { model, optimizer, iter_num, best_val_loss, config }
+}
+
+///|
+pub fn TrainingState::model(self : TrainingState) -> MiniGPT {
+  self.model
+}
+
+///|
+pub fn TrainingState::optimizer(self : TrainingState) -> @optim.AdamW {
+  self.optimizer
+}
+
+///|
+pub fn TrainingState::iter_num(self : TrainingState) -> Int {
+  self.iter_num
+}
+
+///|
+pub fn TrainingState::best_val_loss(self : TrainingState) -> Double {
+  self.best_val_loss
+}
+
+///|
+pub fn TrainingState::config(self : TrainingState) -> TrainingConfig {
+  self.config
+}
+
+///|
+pub struct TrainingCallbacks {
+  priv on_eval : (Int, Double, Double) -> Unit
+  priv on_log : (Int, Double, Double) -> Unit
+  priv on_checkpoint : (TrainingState) -> Unit
+}
+
+///|
+pub fn TrainingCallbacks::new(
+  on_eval? : (Int, Double, Double) -> Unit = fn(
+    _iter_num,
+    _train_loss,
+    _val_loss,
+  ) {
+    ()
+  },
+  on_log? : (Int, Double, Double) -> Unit = fn(
+    _iter_num,
+    _loss,
+    _learning_rate,
+  ) {
+    ()
+  },
+  on_checkpoint? : (TrainingState) -> Unit = fn(_state) { () },
+) -> TrainingCallbacks {
+  { on_eval, on_log, on_checkpoint }
 }
 
 ///|
@@ -239,9 +382,7 @@ pub fn train_token_ids(
     val_ids,
     config,
     rng,
-    fn(_iter_num, _train_loss, _val_loss) { () },
-    fn(_iter_num, _loss, _learning_rate) { () },
-    fn(_model, _optimizer, _iter_num, _best_val_loss, _config) { () },
+    TrainingCallbacks::new(),
   )
 }
 
@@ -252,60 +393,49 @@ pub fn train_text(
   config : TrainingConfig,
   rng : @random.Rand,
 ) -> TrainingResult {
-  train_text_with_options(
+  train_text_with_architecture(
     text,
     tokenizer_config,
     config,
-    N_EMBD,
-    N_HEAD,
-    N_LAYER,
+    ArchitectureConfig::new(),
     rng,
   )
 }
 
 ///|
-pub fn train_text_with_options(
+pub fn train_text_with_architecture(
   text : String,
   tokenizer_config : @tokenizer.TokenizerConfig,
   config : TrainingConfig,
-  n_embd : Int,
-  n_head : Int,
-  n_layer : Int,
+  architecture : ArchitectureConfig,
   rng : @random.Rand,
 ) -> TrainingResult {
   let dataset = @tokenizer.prepare_token_dataset(text, tokenizer_config)
-  let model = MiniGPT::new_gpt_with_options(
-    dataset.tokenizer.vocab_size(),
-    n_embd,
-    n_head,
-    n_layer,
-    config.block_size,
+  let tokenizer = dataset.tokenizer()
+  let train_ids = dataset.train_ids()
+  let val_ids = dataset.val_ids()
+  let model = MiniGPT::new(
+    ModelConfig::from_architecture(
+      tokenizer.vocab_size(),
+      architecture,
+      block_size=config.block_size,
+    ),
     rng,
   )
-  let stats = train_token_ids(
-    model,
-    dataset.train_ids,
-    dataset.val_ids,
-    config,
-    rng,
-  )
-  { model, tokenizer: dataset.tokenizer, stats }
+  let stats = train_token_ids(model, train_ids, val_ids, config, rng)
+  { model, tokenizer, stats }
 }
 
 ///|
-pub fn train_token_ids_with_progress_callback(
+pub fn train_token_ids_with_callbacks(
   model : MiniGPT,
   train_ids : Array[Int],
   val_ids : Array[Int],
   config : TrainingConfig,
   rng : @random.Rand,
-  on_eval : (Int, Double, Double) -> Unit,
-  on_log : (Int, Double, Double) -> Unit,
-  on_checkpoint : (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit,
+  callbacks : TrainingCallbacks,
 ) -> TrainingStats {
-  train_token_ids_internal(
-    model, train_ids, val_ids, config, rng, on_eval, on_log, on_checkpoint,
-  )
+  train_token_ids_internal(model, train_ids, val_ids, config, rng, callbacks)
 }
 
 ///|
@@ -315,18 +445,19 @@ fn train_token_ids_internal(
   val_ids : Array[Int],
   config : TrainingConfig,
   rng : @random.Rand,
-  on_eval : (Int, Double, Double) -> Unit,
-  on_log : (Int, Double, Double) -> Unit,
-  on_checkpoint : (MiniGPT, @optim.AdamW, Int, Double, TrainingConfig) -> Unit,
+  callbacks : TrainingCallbacks,
 ) -> TrainingStats {
   let losses : Array[Double] = []
   let params = model.parameters()
+  let optimizer_config = @optim.AdamWConfig::new(
+    config.learning_rate,
+    beta1=config.beta1,
+    beta2=config.beta2,
+    eps=1.0e-8,
+  )
   let optimizer = @optim.AdamW::new_with_parameter_weight_decays(
     params,
-    config.learning_rate,
-    config.beta1,
-    config.beta2,
-    1.0e-8,
+    optimizer_config,
     model.parameter_weight_decays(config.weight_decay),
   )
   let mut iter_num = 0
@@ -340,7 +471,7 @@ fn train_token_ids_internal(
     if iter_num % config.eval_interval == 0 {
       let train_loss = eval_token_ids(model, train_ids, config, rng)
       let val_loss = eval_token_ids(model, val_ids, config, rng)
-      on_eval(iter_num, train_loss, val_loss)
+      (callbacks.on_eval)(iter_num, train_loss, val_loss)
       if initial_eval_loss != initial_eval_loss {
         initial_eval_loss = val_loss
       }
@@ -350,7 +481,9 @@ fn train_token_ids_internal(
         best_val_loss = val_loss
       }
       if iter_num > 0 && (improved || config.always_save_checkpoint) {
-        on_checkpoint(model, optimizer, iter_num, best_val_loss, config)
+        (callbacks.on_checkpoint)(
+          TrainingState::new(model, optimizer, iter_num, best_val_loss, config),
+        )
         saved_checkpoints += 1
       }
     }
@@ -367,7 +500,7 @@ fn train_token_ids_internal(
     optimizer.step_with_grad_clip(config.grad_clip)
     model.clear_graph()
     if iter_num % config.log_interval == 0 {
-      on_log(iter_num, loss_value, lr)
+      (callbacks.on_log)(iter_num, loss_value, lr)
     }
     iter_num += 1
     if iter_num > config.steps {

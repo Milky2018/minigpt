@@ -38,9 +38,9 @@ pub struct WordTokenizer {
 
 ///|
 pub struct BpeMerge {
-  left : String
-  right : String
-  merged : String
+  priv left : String
+  priv right : String
+  priv merged : String
 }
 
 ///|
@@ -50,6 +50,21 @@ pub fn BpeMerge::new(
   merged : String,
 ) -> BpeMerge {
   { left, right, merged }
+}
+
+///|
+pub fn BpeMerge::left(self : BpeMerge) -> String {
+  self.left
+}
+
+///|
+pub fn BpeMerge::right(self : BpeMerge) -> String {
+  self.right
+}
+
+///|
+pub fn BpeMerge::merged(self : BpeMerge) -> String {
+  self.merged
 }
 
 ///|
@@ -68,9 +83,24 @@ pub(all) enum Tokenizer {
 
 ///|
 pub struct TokenDataset {
-  tokenizer : Tokenizer
-  train_ids : Array[Int]
-  val_ids : Array[Int]
+  priv tokenizer : Tokenizer
+  priv train_ids : Array[Int]
+  priv val_ids : Array[Int]
+}
+
+///|
+pub fn TokenDataset::tokenizer(self : TokenDataset) -> Tokenizer {
+  self.tokenizer
+}
+
+///|
+pub fn TokenDataset::train_ids(self : TokenDataset) -> Array[Int] {
+  self.train_ids.copy()
+}
+
+///|
+pub fn TokenDataset::val_ids(self : TokenDataset) -> Array[Int] {
+  self.val_ids.copy()
 }
 
 ///|
@@ -195,18 +225,6 @@ fn join_tokens(tokens : Array[String]) -> String {
     buf.write_string(token)
   }
   buf.to_string()
-}
-
-///|
-fn single_char_token(text : String) -> Char {
-  let chars : Array[Char] = []
-  for ch in text {
-    chars.push(ch)
-  }
-  if chars.length() != 1 {
-    abort("character tokenizer vocabulary item must contain one character")
-  }
-  chars[0]
 }
 
 ///|
@@ -549,34 +567,6 @@ pub fn Tokenizer::train(
     CharacterLevel => Tokenizer::train_char(text)
     WordLevel => Tokenizer::train_word(text)
     BpeLevel(vocab_size) => Tokenizer::train_bpe(text, vocab_size)
-  }
-}
-
-///|
-pub fn Tokenizer::from_kind_and_vocabulary(
-  kind : String,
-  vocabulary : Array[String],
-) -> Tokenizer {
-  Tokenizer::from_kind_vocabulary_and_merges(kind, vocabulary, [])
-}
-
-///|
-pub fn Tokenizer::from_kind_vocabulary_and_merges(
-  kind : String,
-  vocabulary : Array[String],
-  merges : Array[BpeMerge],
-) -> Tokenizer {
-  match kind {
-    "char" => {
-      let chars : Array[Char] = []
-      for token in vocabulary {
-        chars.push(single_char_token(token))
-      }
-      Character(CharTokenizer::from_chars(chars))
-    }
-    "word" => Word(WordTokenizer::from_tokens(vocabulary))
-    "bpe" => Bpe(BpeTokenizer::from_vocabulary_and_merges(vocabulary, merges))
-    _ => abort("unsupported tokenizer kind: \{kind}")
   }
 }
 

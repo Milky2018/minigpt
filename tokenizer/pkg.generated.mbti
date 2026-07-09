@@ -19,11 +19,12 @@ pub(all) suberror TokenizerError {
 
 // Types and methods
 pub struct BpeMerge {
-  left : String
-  right : String
-  merged : String
+  // private fields
 }
+pub fn BpeMerge::left(Self) -> String
+pub fn BpeMerge::merged(Self) -> String
 pub fn BpeMerge::new(String, String, String) -> Self
+pub fn BpeMerge::right(Self) -> String
 
 pub struct BpeTokenizer {
   // private fields
@@ -49,10 +50,11 @@ pub fn CharTokenizer::vocab_size(Self) -> Int
 pub fn CharTokenizer::vocabulary(Self) -> Array[Char]
 
 pub struct TokenDataset {
-  tokenizer : Tokenizer
-  train_ids : Array[Int]
-  val_ids : Array[Int]
+  // private fields
 }
+pub fn TokenDataset::tokenizer(Self) -> Tokenizer
+pub fn TokenDataset::train_ids(Self) -> Array[Int]
+pub fn TokenDataset::val_ids(Self) -> Array[Int]
 
 pub(all) enum Tokenizer {
   Character(CharTokenizer)
@@ -64,8 +66,6 @@ pub fn Tokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
 pub fn Tokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
 pub fn Tokenizer::from_bpe(BpeTokenizer) -> Self
 pub fn Tokenizer::from_char(CharTokenizer) -> Self
-pub fn Tokenizer::from_kind_and_vocabulary(String, Array[String]) -> Self
-pub fn Tokenizer::from_kind_vocabulary_and_merges(String, Array[String], Array[BpeMerge]) -> Self
 pub fn Tokenizer::from_word(WordTokenizer) -> Self
 pub fn Tokenizer::kind_name(Self) -> String
 pub fn Tokenizer::train(String, TokenizerConfig) -> (Self, Array[Int])

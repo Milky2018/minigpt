@@ -32,21 +32,30 @@ struct AdamWState {
 
 ///|
 pub struct AdamW {
-  state : Ref[AdamWState]
+  priv state : Ref[AdamWState]
 }
 
 ///|
 pub struct AdamWCheckpoint {
-  m : Array[Array[Double]]
-  v : Array[Array[Double]]
-  lr : Double
-  beta1 : Double
-  beta2 : Double
-  eps : Double
-  weight_decays : Array[Double]
-  step : Int
-  beta1_power : Double
-  beta2_power : Double
+  priv m : Array[Array[Double]]
+  priv v : Array[Array[Double]]
+  priv lr : Double
+  priv beta1 : Double
+  priv beta2 : Double
+  priv eps : Double
+  priv weight_decays : Array[Double]
+  priv step : Int
+  priv beta1_power : Double
+  priv beta2_power : Double
+}
+
+///|
+pub struct AdamWConfig {
+  priv lr : Double
+  priv beta1 : Double
+  priv beta2 : Double
+  priv eps : Double
+  priv weight_decay : Double
 }
 
 ///|
@@ -59,40 +68,78 @@ fn copy_double_arrays(values : Array[Array[Double]]) -> Array[Array[Double]] {
 }
 
 ///|
-pub fn AdamW::new(params : Array[@tensor.Tensor], lr : Double) -> AdamW {
-  AdamW::new_with_options(params, lr, 0.9, 0.999, 1.0e-8, 0.0)
+pub fn AdamWConfig::new(
+  lr : Double,
+  beta1? : Double = 0.9,
+  beta2? : Double = 0.999,
+  eps? : Double = 1.0e-8,
+  weight_decay? : Double = 0.0,
+) -> AdamWConfig {
+  if lr <= 0.0 {
+    abort("AdamW learning rate must be positive")
+  }
+  if beta1 < 0.0 || beta1 >= 1.0 || beta2 < 0.0 || beta2 >= 1.0 {
+    abort("AdamW beta values must be in [0, 1)")
+  }
+  if eps <= 0.0 {
+    abort("AdamW eps must be positive")
+  }
+  if weight_decay < 0.0 {
+    abort("AdamW weight decay must not be negative")
+  }
+  { lr, beta1, beta2, eps, weight_decay }
 }
 
 ///|
-pub fn AdamW::new_with_options(
+pub fn AdamWConfig::lr(self : AdamWConfig) -> Double {
+  self.lr
+}
+
+///|
+pub fn AdamWConfig::beta1(self : AdamWConfig) -> Double {
+  self.beta1
+}
+
+///|
+pub fn AdamWConfig::beta2(self : AdamWConfig) -> Double {
+  self.beta2
+}
+
+///|
+pub fn AdamWConfig::eps(self : AdamWConfig) -> Double {
+  self.eps
+}
+
+///|
+pub fn AdamWConfig::weight_decay(self : AdamWConfig) -> Double {
+  self.weight_decay
+}
+
+///|
+pub fn AdamW::new(
   params : Array[@tensor.Tensor],
-  lr : Double,
-  beta1 : Double,
-  beta2 : Double,
-  eps : Double,
-  weight_decay : Double,
+  config : AdamWConfig,
 ) -> AdamW {
   AdamW::new_with_parameter_weight_decays(
     params,
-    lr,
-    beta1,
-    beta2,
-    eps,
-    Array::make(params.length(), weight_decay),
+    config,
+    Array::make(params.length(), config.weight_decay),
   )
 }
 
 ///|
 pub fn AdamW::new_with_parameter_weight_decays(
   params : Array[@tensor.Tensor],
-  lr : Double,
-  beta1 : Double,
-  beta2 : Double,
-  eps : Double,
+  config : AdamWConfig,
   weight_decays : Array[Double],
 ) -> AdamW {
   if params.length() != weight_decays.length() {
     abort("AdamW weight decay count must match parameter count")
+  }
+  for weight_decay in weight_decays {
+    if weight_decay < 0.0 {
+      abort("AdamW weight decay must not be negative")
+    }
   }
   let m : Array[Array[Double]] = []
   let v : Array[Array[Double]] = []
@@ -106,10 +153,10 @@ pub fn AdamW::new_with_parameter_weight_decays(
         params: params.copy(),
         m,
         v,
-        lr,
-        beta1,
-        beta2,
-        eps,
+        lr: config.lr,
+        beta1: config.beta1,
+        beta2: config.beta2,
+        eps: config.eps,
         weight_decays: weight_decays.copy(),
         step: 0,
         beta1_power: 1.0,
@@ -222,4 +269,54 @@ pub fn AdamW::checkpoint(self : AdamW) -> AdamWCheckpoint {
     beta1_power: state.beta1_power,
     beta2_power: state.beta2_power,
   }
+}
+
+///|
+pub fn AdamWCheckpoint::m(self : AdamWCheckpoint) -> Array[Array[Double]] {
+  copy_double_arrays(self.m)
+}
+
+///|
+pub fn AdamWCheckpoint::v(self : AdamWCheckpoint) -> Array[Array[Double]] {
+  copy_double_arrays(self.v)
+}
+
+///|
+pub fn AdamWCheckpoint::lr(self : AdamWCheckpoint) -> Double {
+  self.lr
+}
+
+///|
+pub fn AdamWCheckpoint::beta1(self : AdamWCheckpoint) -> Double {
+  self.beta1
+}
+
+///|
+pub fn AdamWCheckpoint::beta2(self : AdamWCheckpoint) -> Double {
+  self.beta2
+}
+
+///|
+pub fn AdamWCheckpoint::eps(self : AdamWCheckpoint) -> Double {
+  self.eps
+}
+
+///|
+pub fn AdamWCheckpoint::weight_decays(self : AdamWCheckpoint) -> Array[Double] {
+  self.weight_decays.copy()
+}
+
+///|
+pub fn AdamWCheckpoint::step(self : AdamWCheckpoint) -> Int {
+  self.step
+}
+
+///|
+pub fn AdamWCheckpoint::beta1_power(self : AdamWCheckpoint) -> Double {
+  self.beta1_power
+}
+
+///|
+pub fn AdamWCheckpoint::beta2_power(self : AdamWCheckpoint) -> Double {
+  self.beta2_power
 }
