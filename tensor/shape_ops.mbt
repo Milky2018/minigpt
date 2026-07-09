@@ -6,7 +6,11 @@ pub fn Tensor::reshape(self : Tensor, shape : Array[Int]) -> Tensor {
   if self.requires_grad {
     match (self.context, self.node_ref) {
       (Some(ctx), Some(id)) => {
-        let node_ref = ctx.push_tape_node(shape, Reshape(Some(id), self.shape))
+        let node_ref = ctx.push_tape_node(
+          shape,
+          [{ target: Some(id), shape: copy_ints(self.shape) }],
+          ReshapeBackward::{  },
+        )
         {
           data: copy_doubles(self.data),
           shape: copy_ints(shape),
@@ -38,8 +42,8 @@ pub fn Tensor::swap_axes(self : Tensor, axis_a : Int, axis_b : Int) -> Tensor {
     in_idx[b] = out_idx[a]
     out[i] = self.data[ravel_index(in_idx, self.shape)]
   }
-  unary_tensor(self, out, out_shape, parent => {
-    SwapAxes(parent, self.shape, a, b)
+  unary_tensor(self, out, out_shape, fn() {
+    SwapAxesBackward::{ axis_a: a, axis_b: b }
   })
 }
 

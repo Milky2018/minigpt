@@ -61,14 +61,8 @@ pub fn Tensor::matmul(self : Tensor, that : Tensor) -> Tensor {
       Some(ctx) => {
         let node_ref = ctx.push_tape_node(
           out_shape,
-          Matmul(
-            grad_parent_ref(self),
-            self.data,
-            self.shape,
-            grad_parent_ref(that),
-            that.data,
-            that.shape,
-          ),
+          [tape_input(self), tape_input(that)],
+          MatmulBackward::{ lhs_data: self.data, rhs_data: that.data },
         )
         {
           data: out_data,

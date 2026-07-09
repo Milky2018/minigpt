@@ -61,15 +61,12 @@ pub fn Tensor::layer_norm(
       Some(ctx) => {
         let node_ref = ctx.push_tape_node(
           self.shape,
-          LayerNorm(
-            grad_parent_ref(self),
-            self.data,
-            self.shape,
-            grad_parent_ref(weight),
-            weight.data,
-            grad_parent_ref(bias),
+          [tape_input(self), tape_input(weight), tape_input(bias)],
+          LayerNormBackward::{
+            input_data: self.data,
+            weight_data: weight.data,
             eps,
-          ),
+          },
         )
         {
           data: out,

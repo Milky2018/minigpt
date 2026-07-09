@@ -7,7 +7,11 @@ pub fn Tensor::sum(self : Tensor) -> Tensor {
   if self.requires_grad {
     match (self.context, self.node_ref) {
       (Some(ctx), Some(id)) => {
-        let node_ref = ctx.push_tape_node([], Sum(Some(id), self.shape))
+        let node_ref = ctx.push_tape_node(
+          [],
+          [{ target: Some(id), shape: copy_ints(self.shape) }],
+          SumBackward::{  },
+        )
         {
           data: [value],
           shape: [],

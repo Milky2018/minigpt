@@ -22,10 +22,16 @@ fn AutogradContext::push_parameter(
 fn AutogradContext::push_tape_node(
   self : AutogradContext,
   shape : Array[Int],
-  kind : NodeKind,
+  inputs : Array[TapeInput],
+  op : &BackwardOp,
 ) -> NodeRef {
   let id = self.state.val.tape.length()
-  self.state.val.tape.push({ shape: copy_ints(shape), grad: None, kind })
+  self.state.val.tape.push({
+    shape: copy_ints(shape),
+    grad: None,
+    inputs: copy_tape_inputs(inputs),
+    op,
+  })
   TapeRef(self.state.val.tape_epoch, id)
 }
 

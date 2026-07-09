@@ -26,5 +26,7 @@ pub fn Tensor::softmax(self : Tensor, axis : Int) -> Tensor {
       }
     }
   }
-  unary_tensor(self, out, self.shape, parent => Softmax(parent, out, ax))
+  unary_tensor(self, out, self.shape, fn() {
+    SoftmaxBackward::{ output_data: out, axis: ax }
+  })
 }

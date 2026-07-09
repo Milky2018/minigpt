@@ -33,7 +33,7 @@ fn binary_tensor(
   a : Tensor,
   b : Tensor,
   f : (Double, Double) -> Double,
-  kind : (NodeRef?, NodeRef?, Array[Int]) -> NodeKind,
+  op : () -> &BackwardOp,
 ) -> Tensor {
   let out_shape = broadcast_shape(a.shape, b.shape)
   let out_data = binary_data(a, b, out_shape, f)
@@ -41,23 +41,11 @@ fn binary_tensor(
   if needs_grad {
     match result_context(a, b) {
       Some(ctx) => {
-        let aid = if a.requires_grad {
-          match a.node_ref {
-            Some(node_ref) => Some(node_ref)
-            None => abort("requires_grad tensor is missing an autograd node")
-          }
-        } else {
-          None
-        }
-        let bid = if b.requires_grad {
-          match b.node_ref {
-            Some(node_ref) => Some(node_ref)
-            None => abort("requires_grad tensor is missing an autograd node")
-          }
-        } else {
-          None
-        }
-        let node_ref = ctx.push_tape_node(out_shape, kind(aid, bid, out_shape))
+        let node_ref = ctx.push_tape_node(
+          out_shape,
+          [tape_input(a), tape_input(b)],
+          op(),
+        )
         {
           data: out_data,
           shape: out_shape,
@@ -76,29 +64,25 @@ fn binary_tensor(
 
 ///|
 pub fn Tensor::add(self : Tensor, that : Tensor) -> Tensor {
-  binary_tensor(self, that, fn(x, y) { x + y }, fn(aid, bid, _shape) {
-    Add(aid, self.shape, bid, that.shape)
-  })
+  binary_tensor(self, that, fn(x, y) { x + y }, fn() { AddBackward::{  } })
 }
 
 ///|
 pub fn Tensor::sub(self : Tensor, that : Tensor) -> Tensor {
-  binary_tensor(self, that, fn(x, y) { x - y }, fn(aid, bid, _shape) {
-    Sub(aid, self.shape, bid, that.shape)
-  })
+  binary_tensor(self, that, fn(x, y) { x - y }, fn() { SubBackward::{  } })
 }
 
 ///|
 pub fn Tensor::mul(self : Tensor, that : Tensor) -> Tensor {
-  binary_tensor(self, that, fn(x, y) { x * y }, fn(aid, bid, _shape) {
-    Mul(aid, self.data, self.shape, bid, that.data, that.shape)
+  binary_tensor(self, that, fn(x, y) { x * y }, fn() {
+    MulBackward::{ lhs_data: self.data, rhs_data: that.data }
   })
 }
 
 ///|
 pub fn Tensor::div(self : Tensor, that : Tensor) -> Tensor {
-  binary_tensor(self, that, fn(x, y) { x / y }, fn(aid, bid, _shape) {
-    Div(aid, self.data, self.shape, bid, that.data, that.shape)
+  binary_tensor(self, that, fn(x, y) { x / y }, fn() {
+    DivBackward::{ lhs_data: self.data, rhs_data: that.data }
   })
 }
 
@@ -108,7 +92,11 @@ pub fn Tensor::neg(self : Tensor) -> Tensor {
   if self.requires_grad {
     match (self.context, self.node_ref) {
       (Some(ctx), Some(id)) => {
-        let node_ref = ctx.push_tape_node(self.shape, Neg(Some(id), self.shape))
+        let node_ref = ctx.push_tape_node(
+          self.shape,
+          [{ target: Some(id), shape: copy_ints(self.shape) }],
+          NegBackward::{  },
+        )
         {
           data: out_data,
           shape: copy_ints(self.shape),
