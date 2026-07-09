@@ -168,7 +168,7 @@ pub struct TrainingStats {
 ///|
 pub struct TrainingResult {
   model : MiniGPT
-  tokenizer : Tokenizer
+  tokenizer : @tokenizer.Tokenizer
   stats : TrainingStats
 }
 
@@ -273,7 +273,7 @@ pub fn train_text_with_options(
   n_layer : Int,
   rng : @random.Rand,
 ) -> TrainingResult {
-  let dataset = prepare_token_dataset(text, tokenizer_kind)
+  let dataset = @tokenizer.prepare_token_dataset(text, tokenizer_kind)
   let model = MiniGPT::new_gpt_with_options(
     dataset.tokenizer.vocab_size(),
     n_embd,

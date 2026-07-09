@@ -27,7 +27,7 @@ priv struct MiniGPTCheckpoint {
 ///|
 fn MiniGPTCheckpoint::from_model(
   model : MiniGPT,
-  tokenizer : Tokenizer,
+  tokenizer : @tokenizer.Tokenizer,
 ) -> MiniGPTCheckpoint {
   {
     version: CHECKPOINT_VERSION,
@@ -49,7 +49,7 @@ fn MiniGPTCheckpoint::from_model(
 ///|
 fn MiniGPTCheckpoint::to_model_and_tokenizer(
   self : MiniGPTCheckpoint,
-) -> (MiniGPT, Tokenizer) {
+) -> (MiniGPT, @tokenizer.Tokenizer) {
   if self.version != CHECKPOINT_VERSION &&
     self.version != LEGACY_CHAR_CHECKPOINT_VERSION {
     abort("unsupported MiniGPT checkpoint version")
@@ -61,7 +61,7 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
     Some(kind) => kind
     None => abort("missing MiniGPT checkpoint tokenizer kind")
   }
-  let tokenizer = Tokenizer::from_kind_and_vocabulary(
+  let tokenizer = @tokenizer.Tokenizer::from_kind_and_vocabulary(
     tokenizer_kind,
     self.vocabulary,
   )
@@ -77,7 +77,10 @@ fn MiniGPTCheckpoint::to_model_and_tokenizer(
 }
 
 ///|
-pub fn encode_checkpoint(model : MiniGPT, tokenizer : Tokenizer) -> Bytes {
+pub fn encode_checkpoint(
+  model : MiniGPT,
+  tokenizer : @tokenizer.Tokenizer,
+) -> Bytes {
   let checkpoint = MiniGPTCheckpoint::from_model(model, tokenizer)
   encode_checkpoint_data(checkpoint)
 }
@@ -85,7 +88,7 @@ pub fn encode_checkpoint(model : MiniGPT, tokenizer : Tokenizer) -> Bytes {
 ///|
 pub fn encode_training_checkpoint(
   model : MiniGPT,
-  tokenizer : Tokenizer,
+  tokenizer : @tokenizer.Tokenizer,
   optimizer : @optim.AdamW,
   iter_num : Int,
   best_val_loss : Double,
@@ -152,7 +155,7 @@ fn encode_checkpoint_data(checkpoint : MiniGPTCheckpoint) -> Bytes {
 }
 
 ///|
-pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, Tokenizer) {
+pub fn decode_checkpoint(bytes : Bytes) -> (MiniGPT, @tokenizer.Tokenizer) {
   let reader = BytesReader::new(bytes)
   let magic = reader.read_int_le()
   if magic != CHECKPOINT_MAGIC {

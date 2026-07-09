@@ -1,0 +1,67 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Milky2018/minigpt/tokenizer"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub const TOKENIZER_KIND_CHAR : String = "char"
+
+pub const TOKENIZER_KIND_WORD : String = "word"
+
+pub fn prepare_token_dataset(String, String) -> TokenDataset
+
+// Errors
+pub(all) suberror TokenizerError {
+  UnknownCharacter(Char)
+  UnknownToken(String)
+  InvalidTokenId(Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct CharTokenizer {
+  // private fields
+}
+pub fn CharTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn CharTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn CharTokenizer::from_chars(Array[Char]) -> Self
+pub fn CharTokenizer::kind_name(Self) -> String
+pub fn CharTokenizer::train(String) -> (Self, Array[Int])
+pub fn CharTokenizer::vocab_size(Self) -> Int
+pub fn CharTokenizer::vocabulary(Self) -> Array[Char]
+
+pub struct TokenDataset {
+  tokenizer : Tokenizer
+  train_ids : Array[Int]
+  val_ids : Array[Int]
+}
+
+pub(all) enum Tokenizer {
+  Character(CharTokenizer)
+  Word(WordTokenizer)
+}
+pub fn Tokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn Tokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn Tokenizer::from_char(CharTokenizer) -> Self
+pub fn Tokenizer::from_kind_and_vocabulary(String, Array[String]) -> Self
+pub fn Tokenizer::from_word(WordTokenizer) -> Self
+pub fn Tokenizer::kind_name(Self) -> String
+pub fn Tokenizer::vocab_size(Self) -> Int
+pub fn Tokenizer::vocabulary(Self) -> Array[String]
+
+pub struct WordTokenizer {
+  // private fields
+}
+pub fn WordTokenizer::decode(Self, Array[Int]) -> String raise TokenizerError
+pub fn WordTokenizer::encode(Self, String) -> Array[Int] raise TokenizerError
+pub fn WordTokenizer::from_tokens(Array[String]) -> Self
+pub fn WordTokenizer::kind_name(Self) -> String
+pub fn WordTokenizer::train(String) -> (Self, Array[Int])
+pub fn WordTokenizer::vocab_size(Self) -> Int
+pub fn WordTokenizer::vocabulary(Self) -> Array[String]
+
+// Type aliases
+
+// Traits
+

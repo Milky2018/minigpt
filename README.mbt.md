@@ -137,7 +137,7 @@ let config = @minigpt.TrainingConfig::new(4, 8, 20, 0.001, eval_iters=1)
 ///|
 let result = @minigpt.train_text(
   corpus_text,
-  @minigpt.TOKENIZER_KIND_CHAR,
+  @tokenizer.TOKENIZER_KIND_CHAR,
   config,
   rng,
 )
@@ -229,7 +229,7 @@ training checkpoint ~= 250MB
 ## 项目结构
 
 ```text
-tokenizer.mbt       char/word tokenizer and train/val split
+tokenizer/          char/word tokenizer and train/val split
 tensor/             Tensor 和自动微分基础
 nn/                 神经网络基础算子
 optim/              AdamW 优化器
@@ -242,9 +242,9 @@ docs/               教学架构图
 data/               Tiny Shakespeare 语料
 ```
 
-Mooncakes 发布包保留根包、`tensor/`、`nn/`、`optim/`、`cmd/main/`、测试、
-README 和 LICENSE；`data/`、`docs/`、agent 协作文档和空工具目录只属于源码仓库，
-不会进入发布包。
+Mooncakes 发布包保留根包、`tokenizer/`、`tensor/`、`nn/`、`optim/`、
+`cmd/main/`、测试、README 和 LICENSE；`data/`、`docs/`、agent 协作文档和
+空工具目录只属于源码仓库，不会进入发布包。
 
 ## 验证
 

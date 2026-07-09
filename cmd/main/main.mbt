@@ -183,11 +183,11 @@ fn parse_tokenizer_kind(matches : @argparse.Matches) -> String {
 fn load_dataset(
   path : String,
   tokenizer_kind : String,
-) -> @minigpt.TokenDataset {
+) -> @tokenizer.TokenDataset {
   let text = @fs.read_file_to_string(path, encoding="utf8") catch {
     _ => abort("failed to read corpus '\{path}'")
   }
-  @minigpt.prepare_token_dataset(text, tokenizer_kind)
+  @tokenizer.prepare_token_dataset(text, tokenizer_kind)
 }
 
 ///|
@@ -207,7 +207,7 @@ fn print_loss_summary(stats : @minigpt.TrainingStats) -> Unit {
 ///|
 fn print_completion_trace(
   model : @minigpt.MiniGPT,
-  tokenizer : @minigpt.Tokenizer,
+  tokenizer : @tokenizer.Tokenizer,
   prompt : String,
   max_new_tokens : Int,
   top_k : Int,

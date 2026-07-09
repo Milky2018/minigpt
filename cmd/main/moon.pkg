@@ -1,5 +1,6 @@
 import {
   "Milky2018/minigpt",
+  "Milky2018/minigpt/tokenizer",
   "moonbitlang/core/argparse",
   "moonbitlang/core/random",
   "moonbitlang/core/string",

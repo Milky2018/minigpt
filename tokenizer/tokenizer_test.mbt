@@ -1,14 +1,14 @@
 ///|
 test "character tokenizer roundtrips Shakespeare-style text" {
   let text = "To be\nor not to be\n"
-  let (tokenizer, ids) = @minigpt.CharTokenizer::train(text)
+  let (tokenizer, ids) = @tokenizer.CharTokenizer::train(text)
   @test.assert_eq(tokenizer.decode(ids), text)
   @test.assert_eq(tokenizer.decode(tokenizer.encode(text)), text)
 }
 
 ///|
 test "character tokenizer uses sorted vocabulary" {
-  let tokenizer = @minigpt.CharTokenizer::from_chars(['b', 'a', '\n'])
+  let tokenizer = @tokenizer.CharTokenizer::from_chars(['b', 'a', '\n'])
   @test.assert_eq(tokenizer.vocab_size(), 3)
   @test.assert_eq(tokenizer.vocabulary(), ['\n', 'a', 'b'])
   @test.assert_eq(tokenizer.encode("ba\n"), [2, 1, 0])
@@ -17,7 +17,7 @@ test "character tokenizer uses sorted vocabulary" {
 
 ///|
 test "character tokenizer rejects unknown characters" {
-  let (tokenizer, _) = @minigpt.CharTokenizer::train("ab")
+  let (tokenizer, _) = @tokenizer.CharTokenizer::train("ab")
   try {
     let _ = tokenizer.encode("abc")
   } catch {
@@ -30,7 +30,7 @@ test "character tokenizer rejects unknown characters" {
 
 ///|
 test "character tokenizer rejects invalid token ids" {
-  let (tokenizer, _) = @minigpt.CharTokenizer::train("ab")
+  let (tokenizer, _) = @tokenizer.CharTokenizer::train("ab")
   try {
     let _ = tokenizer.decode([0, 2])
   } catch {
@@ -43,7 +43,7 @@ test "character tokenizer rejects invalid token ids" {
 
 ///|
 test "prepare_token_dataset uses nanoGPT split" {
-  let dataset = @minigpt.prepare_token_dataset("abcdefghij", "char")
+  let dataset = @tokenizer.prepare_token_dataset("abcdefghij", "char")
   @test.assert_eq(dataset.train_ids.length(), 9)
   @test.assert_eq(dataset.val_ids.length(), 1)
   @test.assert_eq(dataset.tokenizer.vocab_size(), 10)
@@ -52,7 +52,7 @@ test "prepare_token_dataset uses nanoGPT split" {
 ///|
 test "word tokenizer roundtrips whitespace separated tokens" {
   let text = "heat olive oil\nadd salt\n"
-  let (tokenizer, ids) = @minigpt.WordTokenizer::train(text)
+  let (tokenizer, ids) = @tokenizer.WordTokenizer::train(text)
   @test.assert_eq(tokenizer.kind_name(), "word")
   @test.assert_eq(tokenizer.vocabulary(), [
     "\n", "add", "oil", "heat", "salt", "olive",
@@ -63,7 +63,7 @@ test "word tokenizer roundtrips whitespace separated tokens" {
 
 ///|
 test "word tokenizer rejects unknown tokens" {
-  let (tokenizer, _) = @minigpt.WordTokenizer::train("heat oil")
+  let (tokenizer, _) = @tokenizer.WordTokenizer::train("heat oil")
   try {
     let _ = tokenizer.encode("heat butter")
   } catch {
@@ -76,7 +76,7 @@ test "word tokenizer rejects unknown tokens" {
 
 ///|
 test "prepare_token_dataset can use word tokenizer" {
-  let dataset = @minigpt.prepare_token_dataset("heat oil\nadd salt\n", "word")
+  let dataset = @tokenizer.prepare_token_dataset("heat oil\nadd salt\n", "word")
   @test.assert_eq(dataset.tokenizer.kind_name(), "word")
   @test.assert_eq(dataset.tokenizer.vocab_size(), 5)
   @test.assert_eq(dataset.train_ids.length(), 5)

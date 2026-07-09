@@ -157,6 +157,12 @@ The opaque high-level root-package API that owns the GPT model shape,
 tokenizer-aware training/generation flow, and checkpoint compatibility.
 _Avoid_: Treating the full MiniGPT model as a low-level `nn/` primitive
 
+**Tokenizer Module**:
+The package-level interface for converting text to token ids, decoding token
+ids back to text, and preparing tokenized train/validation splits.
+_Avoid_: Keeping tokenizer implementation inside the high-level MiniGPT model
+module
+
 **Training Result**:
 The value returned by high-level text training, containing the trained MiniGPT
 model, tokenizer, and training statistics needed for generation or checkpoint
