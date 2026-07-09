@@ -1,0 +1,8 @@
+import {
+  "Milky2018/minigpt/nn",
+  "Milky2018/minigpt/optim",
+  "Milky2018/minigpt/tensor",
+  "Milky2018/minigpt/tokenizer",
+  "moonbitlang/core/double",
+  "moonbitlang/core/random",
+} for "test"
