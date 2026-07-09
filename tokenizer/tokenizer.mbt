@@ -129,7 +129,7 @@ fn char_map(chars : Array[Char]) -> Map[Char, Int] {
 ///|
 fn split_word_tokens(text : String) -> Array[String] {
   let tokens : Array[String] = []
-  let buf = StringBuilder::new()
+  let buf = StringBuilder()
   fn flush() -> Unit {
     if !buf.is_empty() {
       tokens.push(buf.to_string())
@@ -220,7 +220,7 @@ fn join_word_tokens(tokens : Array[String]) -> String {
 
 ///|
 fn join_tokens(tokens : Array[String]) -> String {
-  let buf = StringBuilder::new()
+  let buf = StringBuilder()
   for token in tokens {
     buf.write_string(token)
   }
