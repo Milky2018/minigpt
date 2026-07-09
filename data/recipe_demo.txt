@@ -1,61 +1,131 @@
-mix flour and water until smooth
-add salt and pepper to taste
-boil water in a large pot
-cook pasta until al dente
-drain pasta using a colander
-heat olive oil in a pan
-saute garlic in butter
-add onion and cook until soft
-season with salt and pepper
-stir the sauce gently
-simmer over low heat
-slice the tomato thinly
-chop onion and garlic
-dice carrot and celery
-mince the garlic cloves
-rinse rice with cold water
-bake in the oven until golden
-whisk eggs and cream together
-mix flour and butter
-pour batter into the pan
-fold in the cream gently
-preheat the oven
-grease the pan with butter
-let cool for five minutes
-serve with fresh parsley
-combine all ingredients
-stir until smooth and creamy
-add tomato sauce and stir
-fry in olive oil
-season the chicken with salt
-bring to a boil
-reduce heat and simmer
-cover the pot
-remove from heat
-toss with olive oil
-sprinkle with cheese
-add butter and stir
-cook the onion until soft
-heat the pan over medium heat
-stir until golden brown
-cook for ten minutes
-drain and rinse with water
-chop the carrot finely
-add egg and mix well
-bake until golden and crisp
-add garlic to the oil
-cook over medium heat
-stir in the cream
-season with pepper and salt
-combine flour and egg
-whisk until smooth
-add water to the pot
-cook rice in salted water
-stir in butter until melted
-serve with pasta
-heat butter in a pan
-saute onion in olive oil
-chop garlic finely
-mash potato until smooth
-mix well and serve
-boil for ten minutes
+heat oil in pan
+heat butter in pan
+heat water in pot
+heat sauce in pot
+add garlic and onion
+add salt and pepper
+add tomato and herbs
+add carrot and beans
+add chicken and salt
+add pasta and sauce
+stir garlic and onion
+stir tomato sauce
+stir cream sauce
+stir rice with herbs
+stir pasta with cheese
+mix flour and water
+mix flour and egg
+mix butter and flour
+mix cream and cheese
+mix salt and pepper
+whisk egg and cream
+whisk flour and water
+whisk butter and cream
+whisk sauce until smooth
+whisk egg until smooth
+boil water in pot
+boil rice in water
+boil pasta in water
+boil beans until soft
+boil carrot until soft
+cook rice until soft
+cook pasta until soft
+cook chicken until golden
+cook tomato sauce
+cook beans with herbs
+simmer sauce over low
+simmer tomato over low
+simmer chicken in sauce
+simmer beans in sauce
+simmer rice with water
+fry garlic in oil
+fry onion in butter
+fry chicken until golden
+fry egg in pan
+fry carrot with herbs
+roast chicken until golden
+roast carrot until soft
+roast tomato with herbs
+roast onion with oil
+roast beans until crisp
+bake pasta with cheese
+bake chicken with sauce
+bake egg with cream
+bake tomato until soft
+bake beans until crisp
+drain rice and serve
+drain pasta and serve
+drain beans and serve
+drain water from pasta
+drain water from rice
+toss pasta with oil
+toss pasta with sauce
+toss rice with herbs
+toss beans with butter
+toss carrot with oil
+serve rice with chicken
+serve pasta with sauce
+serve chicken with beans
+serve tomato with herbs
+serve egg with cheese
+serve warm rice
+serve warm pasta
+serve warm chicken
+serve fresh tomato
+serve fresh herbs
+heat garlic oil
+heat tomato sauce
+heat cream sauce
+heat rice with butter
+heat beans with oil
+add butter to rice
+add cheese to pasta
+add cream to sauce
+add herbs to chicken
+add pepper to tomato
+stir rice until warm
+stir pasta until warm
+stir sauce until warm
+stir butter until smooth
+stir cheese until smooth
+mix rice and beans
+mix pasta and tomato
+mix chicken and sauce
+mix carrot and onion
+mix garlic and herbs
+cook rice with beans
+cook pasta with tomato
+cook chicken with garlic
+cook carrot with butter
+cook onion with pepper
+simmer rice until warm
+simmer pasta until soft
+simmer tomato until soft
+simmer onion until soft
+simmer sauce until smooth
+fry rice with egg
+fry pasta with butter
+fry beans with garlic
+fry tomato with onion
+fry cheese until crisp
+roast garlic until golden
+roast onion until golden
+roast chicken until crisp
+roast carrot with pepper
+roast beans with salt
+bake rice with cheese
+bake pasta until golden
+bake chicken until crisp
+bake carrot with butter
+bake tomato with garlic
+drain pasta and serve
+drain rice and serve
+drain beans and serve
+toss chicken with sauce
+toss tomato with salt
+toss onion with pepper
+serve pasta with chicken
+serve rice with beans
+serve chicken with sauce
+serve carrot with butter
+serve beans with herbs

@@ -30,10 +30,11 @@ split = first 90% train, last 10% val
 data/recipe_demo.txt
 ```
 
-这个文件来自 `habakan/moonbit-gpt-edge-demo` 的 Cooklang-style recipe
-sentences，来源和许可证记录在 `data/RECIPE_DEMO_SOURCE.md`。它只有几十行，
-适合课堂里快速演示“模型如何从短语料中学会菜谱风格补全”，不适合作为模型质量
-benchmark。
+这个文件以 `habakan/moonbit-gpt-edge-demo` 的 Cooklang-style recipe
+sentences 为种子扩展而来，来源和许可证记录在 `data/RECIPE_DEMO_SOURCE.md`。
+它使用 49 个英文词反复组合，word-level tokenizer 加上换行 token 后 vocab size
+为 50，适合课堂里快速演示“模型如何从短语料中学会菜谱风格补全”，不适合作为
+模型质量 benchmark。
 
 菜谱语料可以直接训练。默认 tokenizer 仍然是 `char`，用于对齐 nanoGPT；
 菜谱演示建议显式使用 `--tokenizer word`，让模型一次预测一个英文词，更容易在
