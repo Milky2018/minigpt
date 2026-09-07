@@ -9,8 +9,8 @@ pub fn Tensor::sum(self : Tensor) -> Tensor {
       (Some(ctx), Some(id)) => {
         let node_ref = ctx.push_tape_node(
           [],
-          [{ target: Some(id), shape: copy_ints(self.shape) }],
-          SumBackward::{  },
+          [{ target: Some(id), shape: copy_ints(self.shape), }],
+          SumBackward::{ },
         )
         {
           data: [value],

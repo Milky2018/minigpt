@@ -1,0 +1,15 @@
+.DS_Store
+_build/
+target/
+target
+.mooncakes/
+.moonagent/
+minigpt-model.bin
+minigpt
+
+/AGENTS.md
+/CONTEXT.md
+/cmd/smoke/
+/data/
+/docs/
+/tools/

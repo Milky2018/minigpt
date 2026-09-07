@@ -49,7 +49,7 @@ pub fn BpeMerge::BpeMerge(
   right : String,
   merged : String,
 ) -> BpeMerge {
-  { left, right, merged }
+  { left, right, merged, }
 }
 
 ///|
@@ -105,7 +105,7 @@ pub fn TokenDataset::val_ids(self : TokenDataset) -> Array[Int] {
 
 ///|
 fn collect_sorted_chars(text : String) -> Array[Char] {
-  let seen : Map[Char, Unit] = {}
+  let seen : Map[Char, Unit] = Map([])
   for ch in text {
     seen[ch] = ()
   }
@@ -119,7 +119,7 @@ fn collect_sorted_chars(text : String) -> Array[Char] {
 
 ///|
 fn char_map(chars : Array[Char]) -> Map[Char, Int] {
-  let char_to_id : Map[Char, Int] = {}
+  let char_to_id : Map[Char, Int] = Map([])
   for i in 0..<chars.length() {
     char_to_id[chars[i]] = i
   }
@@ -152,7 +152,7 @@ fn split_word_tokens(text : String) -> Array[String] {
 
 ///|
 fn collect_sorted_tokens(tokens : Array[String]) -> Array[String] {
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for token in tokens {
     seen[token] = ()
   }
@@ -166,7 +166,7 @@ fn collect_sorted_tokens(tokens : Array[String]) -> Array[String] {
 
 ///|
 fn token_map(tokens : Array[String]) -> Map[String, Int] {
-  let token_to_id : Map[String, Int] = {}
+  let token_to_id : Map[String, Int] = Map([])
   for i in 0..<tokens.length() {
     token_to_id[tokens[i]] = i
   }
@@ -178,7 +178,7 @@ fn validate_ordered_tokens(tokens : Array[String]) -> Unit {
   if tokens.length() == 0 {
     abort("tokenizer vocabulary must not be empty")
   }
-  let seen : Map[String, Unit] = {}
+  let seen : Map[String, Unit] = Map([])
   for token in tokens {
     if token == "" {
       abort("tokenizer vocabulary must not contain empty tokens")
@@ -247,9 +247,9 @@ fn best_bpe_pair(
   if tokens.length() < 2 {
     return None
   }
-  let counts : Map[String, Int] = {}
-  let lefts : Map[String, String] = {}
-  let rights : Map[String, String] = {}
+  let counts : Map[String, Int] = Map([])
+  let lefts : Map[String, String] = Map([])
+  let rights : Map[String, String] = Map([])
   for i in 0..<(tokens.length() - 1) {
     let left = tokens[i]
     let right = tokens[i + 1]
@@ -275,7 +275,7 @@ fn best_bpe_pair(
   }
   let left = lefts[best_key]
   let right = rights[best_key]
-  Some({ left, right, merged: left + right })
+  Some({ left, right, merged: left + right, })
 }
 
 ///|
@@ -311,7 +311,7 @@ pub fn CharTokenizer::from_chars(chars : Array[Char]) -> CharTokenizer {
       abort("character tokenizer vocabulary must not contain duplicates")
     }
   }
-  { chars: sorted, char_to_id: char_map(sorted) }
+  { chars: sorted, char_to_id: char_map(sorted), }
 }
 
 ///|
@@ -342,7 +342,7 @@ pub fn BpeTokenizer::from_vocabulary_and_merges(
       abort("BPE merge rule must reference vocabulary tokens")
     }
   }
-  { tokens: vocabulary.copy(), token_to_id, merges: merges.copy() }
+  { tokens: vocabulary.copy(), token_to_id, merges: merges.copy(), }
 }
 
 ///|
@@ -459,7 +459,7 @@ pub fn WordTokenizer::from_tokens(tokens : Array[String]) -> WordTokenizer {
       abort("word tokenizer vocabulary must not contain duplicates")
     }
   }
-  { tokens: sorted, token_to_id: token_map(sorted) }
+  { tokens: sorted, token_to_id: token_map(sorted), }
 }
 
 ///|
@@ -693,3 +693,15 @@ pub fn prepare_token_dataset(
     val_ids: ids[split:ids.length()].to_owned(),
   }
 }
+
+///|
+pub extend TokenizerConfig with Debug::{to_repr}
+
+///|
+pub extend TokenizerConfig with Eq::{not_equal, equal}
+
+///|
+pub extend TokenizerError with Debug::{to_repr}
+
+///|
+pub extend TokenizerError with Eq::{not_equal, equal}

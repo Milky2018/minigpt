@@ -17,4 +17,3 @@ pub fn embedding(@tensor.Tensor, @tensor.TokenIds) -> @tensor.Tensor
 // Type aliases
 
 // Traits
-

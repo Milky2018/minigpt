@@ -16,6 +16,9 @@ pub(all) suberror TokenizerError {
   UnknownToken(String)
   InvalidTokenId(Int)
 } derive(Eq, @debug.Debug)
+pub fn TokenizerError::equal(Self, Self) -> Bool
+pub fn TokenizerError::not_equal(Self, Self) -> Bool
+pub fn TokenizerError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct BpeMerge {
@@ -80,6 +83,9 @@ pub(all) enum TokenizerConfig {
   WordLevel
   BpeLevel(Int)
 } derive(Eq, @debug.Debug)
+pub fn TokenizerConfig::equal(Self, Self) -> Bool
+pub fn TokenizerConfig::not_equal(Self, Self) -> Bool
+pub fn TokenizerConfig::to_repr(Self) -> @debug.Repr
 
 pub struct WordTokenizer {
   // private fields
@@ -95,4 +101,3 @@ pub fn WordTokenizer::vocabulary(Self) -> Array[String]
 // Type aliases
 
 // Traits
-

@@ -27,7 +27,7 @@ impl BackwardOp for MatmulBackward with fn backward(
       rhs_grad[ri] += grad[i] * self.lhs_data[li]
     }
   }
-  [{ slot: 0, data: lhs_grad }, { slot: 1, data: rhs_grad }]
+  [{ slot: 0, data: lhs_grad, }, { slot: 1, data: rhs_grad, }]
 }
 
 ///|
@@ -54,7 +54,7 @@ impl BackwardOp for SoftmaxBackward with fn backward(
       }
     }
   }
-  [{ slot: 0, data: g }]
+  [{ slot: 0, data: g, }]
 }
 
 ///|
@@ -103,8 +103,8 @@ impl BackwardOp for LayerNormBackward with fn backward(
     }
   }
   [
-    { slot: 0, data: input_grad },
-    { slot: 1, data: weight_grad },
-    { slot: 2, data: bias_grad },
+    { slot: 0, data: input_grad, },
+    { slot: 1, data: weight_grad, },
+    { slot: 2, data: bias_grad, },
   ]
 }

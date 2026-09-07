@@ -1002,7 +1002,7 @@ fn sample_token(
   }
   let data = logits.data()
   // 按 logit 值降序排列
-  let order = Array::new(capacity=data.length())
+  let order = Array(capacity=data.length())
   for i in 0..<data.length() {
     order.push(i)
   }

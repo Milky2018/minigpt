@@ -264,7 +264,7 @@ fn TrainingState::TrainingState(
   best_val_loss : Double,
   config : TrainingConfig,
 ) -> TrainingState {
-  { model, optimizer, iter_num, best_val_loss, config }
+  { model, optimizer, iter_num, best_val_loss, config, }
 }
 
 ///|
@@ -319,7 +319,7 @@ pub fn TrainingCallbacks::TrainingCallbacks(
   on_log? : (LogEvent) -> Unit = fn(_event) { () },
   on_checkpoint? : (TrainingState) -> Unit = fn(_state) { () },
 ) -> TrainingCallbacks {
-  { on_eval, on_log, on_checkpoint }
+  { on_eval, on_log, on_checkpoint, }
 }
 
 ///|
@@ -430,7 +430,7 @@ pub fn train_text_with_architecture(
     rng,
   )
   let stats = train_token_ids(model, train_ids, val_ids, config, rng)
-  { model, tokenizer, stats }
+  { model, tokenizer, stats, }
 }
 
 ///|
@@ -478,7 +478,7 @@ fn train_token_ids_internal(
     if iter_num % config.eval_interval == 0 {
       let train_loss = eval_token_ids(model, train_ids, config, rng)
       let val_loss = eval_token_ids(model, val_ids, config, rng)
-      (callbacks.on_eval)({ iter_num, train_loss, val_loss })
+      (callbacks.on_eval)({ iter_num, train_loss, val_loss, })
       if initial_eval_loss != initial_eval_loss {
         initial_eval_loss = val_loss
       }
@@ -508,7 +508,7 @@ fn train_token_ids_internal(
     model.clear_graph()
     optimizer.step_with_grad_clip(config.grad_clip)
     if iter_num % config.log_interval == 0 {
-      (callbacks.on_log)({ iter_num, loss: loss_value, learning_rate: lr })
+      (callbacks.on_log)({ iter_num, loss: loss_value, learning_rate: lr, })
     }
     iter_num += 1
     if iter_num > config.steps {

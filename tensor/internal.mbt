@@ -21,14 +21,14 @@ fn grad_parent_ref(t : Tensor) -> NodeRef? {
 
 ///|
 fn tape_input(t : Tensor) -> TapeInput {
-  { target: grad_parent_ref(t), shape: copy_ints(t.shape) }
+  { target: grad_parent_ref(t), shape: copy_ints(t.shape), }
 }
 
 ///|
 fn copy_tape_inputs(inputs : Array[TapeInput]) -> Array[TapeInput] {
   let copied : Array[TapeInput] = []
   for input in inputs {
-    copied.push({ target: input.target, shape: copy_ints(input.shape) })
+    copied.push({ target: input.target, shape: copy_ints(input.shape), })
   }
   copied
 }

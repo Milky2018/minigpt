@@ -8,8 +8,8 @@ pub fn Tensor::reshape(self : Tensor, shape : Array[Int]) -> Tensor {
       (Some(ctx), Some(id)) => {
         let node_ref = ctx.push_tape_node(
           shape,
-          [{ target: Some(id), shape: copy_ints(self.shape) }],
-          ReshapeBackward::{  },
+          [{ target: Some(id), shape: copy_ints(self.shape), }],
+          ReshapeBackward::{ },
         )
         {
           data: copy_doubles(self.data),
@@ -43,7 +43,7 @@ pub fn Tensor::swap_axes(self : Tensor, axis_a : Int, axis_b : Int) -> Tensor {
     out[i] = self.data[ravel_index(in_idx, self.shape)]
   }
   unary_tensor(self, out, out_shape, fn() {
-    SwapAxesBackward::{ axis_a: a, axis_b: b }
+    SwapAxesBackward::{ axis_a: a, axis_b: b, }
   })
 }
 

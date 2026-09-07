@@ -69,4 +69,3 @@ pub fn TokenIds::shape(Self) -> Array[Int]
 // Type aliases
 
 // Traits
-

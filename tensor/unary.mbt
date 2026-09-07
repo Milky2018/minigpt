@@ -2,7 +2,7 @@
 pub fn Tensor::exp(self : Tensor) -> Tensor {
   let out = self.data.map(x => @math.exp(x))
   unary_tensor(self, out, self.shape, fn() {
-    ExpBackward::{ input_data: self.data }
+    ExpBackward::{ input_data: self.data, }
   })
 }
 
@@ -10,7 +10,7 @@ pub fn Tensor::exp(self : Tensor) -> Tensor {
 pub fn Tensor::log(self : Tensor) -> Tensor {
   let out = self.data.map(x => @math.ln(x))
   unary_tensor(self, out, self.shape, fn() {
-    LogBackward::{ input_data: self.data }
+    LogBackward::{ input_data: self.data, }
   })
 }
 
@@ -18,7 +18,7 @@ pub fn Tensor::log(self : Tensor) -> Tensor {
 pub fn Tensor::relu(self : Tensor) -> Tensor {
   let out = self.data.map(x => if x > 0.0 { x } else { 0.0 })
   unary_tensor(self, out, self.shape, fn() {
-    ReluBackward::{ input_data: self.data }
+    ReluBackward::{ input_data: self.data, }
   })
 }
 
@@ -63,6 +63,6 @@ fn gelu_value(x : Double) -> Double {
 pub fn Tensor::gelu(self : Tensor) -> Tensor {
   let out = self.data.map(x => gelu_value(x))
   unary_tensor(self, out, self.shape, fn() {
-    GeluBackward::{ input_data: self.data }
+    GeluBackward::{ input_data: self.data, }
   })
 }

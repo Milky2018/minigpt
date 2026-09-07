@@ -23,8 +23,8 @@ pub fn Tensor::gather_rows(self : Tensor, ids : TokenIds) -> Tensor {
       (Some(ctx), Some(id)) => {
         let node_ref = ctx.push_tape_node(
           out_shape,
-          [{ target: Some(id), shape: copy_ints(self.shape) }],
-          GatherRowsBackward::{ ids: id_data },
+          [{ target: Some(id), shape: copy_ints(self.shape), }],
+          GatherRowsBackward::{ ids: id_data, },
         )
         {
           data: out,
@@ -88,8 +88,8 @@ pub fn Tensor::cross_entropy(self : Tensor, targets : TokenIds) -> Tensor {
       (Some(ctx), Some(id)) => {
         let node_ref = ctx.push_tape_node(
           [],
-          [{ target: Some(id), shape: copy_ints(self.shape) }],
-          CrossEntropyBackward::{ probs, targets: target_data },
+          [{ target: Some(id), shape: copy_ints(self.shape), }],
+          CrossEntropyBackward::{ probs, targets: target_data, },
         )
         {
           data: [loss],

@@ -11,7 +11,7 @@
 
 name = "Milky2018/minigpt"
 
-version = "0.1.1"
+version = "0.1.2"
 
 readme = "README.mbt.md"
 
@@ -26,9 +26,5 @@ preferred_target = "native"
 description = "A small MoonBit GPT training toolkit with tensor autodiff, tokenizer support, checkpoints, and a teaching CLI."
 
 import {
-  "moonbitlang/x@0.4.46",
+  "moonbitlang/x@0.5.1",
 }
-
-options(
-  exclude: [ "AGENTS.md", "CONTEXT.md", "cmd/smoke", "data", "docs", "tools" ],
-)

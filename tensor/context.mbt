@@ -1,11 +1,11 @@
 ///|
-let next_context_id : Ref[Int] = { val: 0 }
+let next_context_id : Ref[Int] = { val: 0, }
 
 ///|
 pub fn AutogradContext::AutogradContext() -> AutogradContext {
   let id = next_context_id.val
   next_context_id.val = id + 1
-  { id, state: { val: { params: [], tape: [], tape_epoch: 0 } } }
+  { id, state: { val: { params: [], tape: [], tape_epoch: 0, }, }, }
 }
 
 ///|
@@ -14,7 +14,7 @@ fn AutogradContext::push_parameter(
   shape : Array[Int],
 ) -> NodeRef {
   let id = self.state.val.params.length()
-  self.state.val.params.push({ shape: copy_ints(shape), grad: None })
+  self.state.val.params.push({ shape: copy_ints(shape), grad: None, })
   ParamRef(id)
 }
 

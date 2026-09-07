@@ -5,7 +5,7 @@ impl BackwardOp for SumBackward with fn backward(
   _out_shape,
   inputs,
 ) {
-  [{ slot: 0, data: Array::make(shape_size(inputs[0].shape), grad[0]) }]
+  [{ slot: 0, data: Array::make(shape_size(inputs[0].shape), grad[0]), }]
 }
 
 ///|
@@ -15,7 +15,7 @@ impl BackwardOp for ReshapeBackward with fn backward(
   _out_shape,
   inputs,
 ) {
-  [{ slot: 0, data: Tensor::from_array(grad, inputs[0].shape).data() }]
+  [{ slot: 0, data: Tensor::from_array(grad, inputs[0].shape).data(), }]
 }
 
 ///|
@@ -34,5 +34,5 @@ impl BackwardOp for SwapAxesBackward with fn backward(
     in_idx[self.axis_b] = out_idx[self.axis_a]
     parent_grad[ravel_index(in_idx, parent_shape)] = grad[i]
   }
-  [{ slot: 0, data: parent_grad }]
+  [{ slot: 0, data: parent_grad, }]
 }

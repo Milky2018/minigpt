@@ -43,7 +43,7 @@ pub fn TrainingCheckpoint::TrainingCheckpoint(
   if iter_num < 0 {
     abort("iter_num must not be negative")
   }
-  { model, tokenizer, optimizer, iter_num, best_val_loss, config }
+  { model, tokenizer, optimizer, iter_num, best_val_loss, config, }
 }
 
 ///|
@@ -385,7 +385,7 @@ priv struct BytesReader {
 
 ///|
 fn BytesReader::BytesReader(bytes : Bytes) -> BytesReader {
-  { bytes, offset: 0 }
+  { bytes, offset: 0, }
 }
 
 ///|

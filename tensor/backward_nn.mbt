@@ -14,7 +14,7 @@ impl BackwardOp for GatherRowsBackward with fn backward(
       weight_grad[row * width + d] += grad[i * width + d]
     }
   }
-  [{ slot: 0, data: weight_grad }]
+  [{ slot: 0, data: weight_grad, }]
 }
 
 ///|
@@ -34,5 +34,5 @@ impl BackwardOp for CrossEntropyBackward with fn backward(
   for i in 0..<logits_grad.length() {
     logits_grad[i] *= scale
   }
-  [{ slot: 0, data: logits_grad }]
+  [{ slot: 0, data: logits_grad, }]
 }

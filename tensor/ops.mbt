@@ -64,25 +64,25 @@ fn binary_tensor(
 
 ///|
 pub fn Tensor::add(self : Tensor, that : Tensor) -> Tensor {
-  binary_tensor(self, that, fn(x, y) { x + y }, fn() { AddBackward::{  } })
+  binary_tensor(self, that, fn(x, y) { x + y }, fn() { AddBackward::{ } })
 }
 
 ///|
 pub fn Tensor::sub(self : Tensor, that : Tensor) -> Tensor {
-  binary_tensor(self, that, fn(x, y) { x - y }, fn() { SubBackward::{  } })
+  binary_tensor(self, that, fn(x, y) { x - y }, fn() { SubBackward::{ } })
 }
 
 ///|
 pub fn Tensor::mul(self : Tensor, that : Tensor) -> Tensor {
   binary_tensor(self, that, fn(x, y) { x * y }, fn() {
-    MulBackward::{ lhs_data: self.data, rhs_data: that.data }
+    MulBackward::{ lhs_data: self.data, rhs_data: that.data, }
   })
 }
 
 ///|
 pub fn Tensor::div(self : Tensor, that : Tensor) -> Tensor {
   binary_tensor(self, that, fn(x, y) { x / y }, fn() {
-    DivBackward::{ lhs_data: self.data, rhs_data: that.data }
+    DivBackward::{ lhs_data: self.data, rhs_data: that.data, }
   })
 }
 
@@ -94,8 +94,8 @@ pub fn Tensor::neg(self : Tensor) -> Tensor {
       (Some(ctx), Some(id)) => {
         let node_ref = ctx.push_tape_node(
           self.shape,
-          [{ target: Some(id), shape: copy_ints(self.shape) }],
-          NegBackward::{  },
+          [{ target: Some(id), shape: copy_ints(self.shape), }],
+          NegBackward::{ },
         )
         {
           data: out_data,

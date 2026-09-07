@@ -1,15 +1,15 @@
 ///|
 impl BackwardOp for AddBackward with fn backward(_self, grad, out_shape, inputs) {
   [
-    { slot: 0, data: reduce_to_shape(grad, out_shape, inputs[0].shape) },
-    { slot: 1, data: reduce_to_shape(grad, out_shape, inputs[1].shape) },
+    { slot: 0, data: reduce_to_shape(grad, out_shape, inputs[0].shape), },
+    { slot: 1, data: reduce_to_shape(grad, out_shape, inputs[1].shape), },
   ]
 }
 
 ///|
 impl BackwardOp for SubBackward with fn backward(_self, grad, out_shape, inputs) {
   [
-    { slot: 0, data: reduce_to_shape(grad, out_shape, inputs[0].shape) },
+    { slot: 0, data: reduce_to_shape(grad, out_shape, inputs[0].shape), },
     {
       slot: 1,
       data: reduce_to_shape(grad, out_shape, inputs[1].shape).map(x => -x),
@@ -31,8 +31,8 @@ impl BackwardOp for MulBackward with fn backward(self, grad, out_shape, inputs) 
     rhs_grad[i] = grad[i] * self.lhs_data[li]
   }
   [
-    { slot: 0, data: reduce_to_shape(lhs_grad, out_shape, lhs_shape) },
-    { slot: 1, data: reduce_to_shape(rhs_grad, out_shape, rhs_shape) },
+    { slot: 0, data: reduce_to_shape(lhs_grad, out_shape, lhs_shape), },
+    { slot: 1, data: reduce_to_shape(rhs_grad, out_shape, rhs_shape), },
   ]
 }
 
@@ -51,8 +51,8 @@ impl BackwardOp for DivBackward with fn backward(self, grad, out_shape, inputs) 
       -(self.lhs_data[li] / (self.rhs_data[ri] * self.rhs_data[ri]))
   }
   [
-    { slot: 0, data: reduce_to_shape(lhs_grad, out_shape, lhs_shape) },
-    { slot: 1, data: reduce_to_shape(rhs_grad, out_shape, rhs_shape) },
+    { slot: 0, data: reduce_to_shape(lhs_grad, out_shape, lhs_shape), },
+    { slot: 1, data: reduce_to_shape(rhs_grad, out_shape, rhs_shape), },
   ]
 }
 
@@ -72,7 +72,7 @@ impl BackwardOp for ExpBackward with fn backward(self, grad, out_shape, inputs) 
   for i in 0..<g.length() {
     g[i] = grad[i] * @math.exp(self.input_data[i])
   }
-  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape) }]
+  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape), }]
 }
 
 ///|
@@ -81,7 +81,7 @@ impl BackwardOp for LogBackward with fn backward(self, grad, out_shape, inputs) 
   for i in 0..<g.length() {
     g[i] = grad[i] / self.input_data[i]
   }
-  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape) }]
+  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape), }]
 }
 
 ///|
@@ -90,7 +90,7 @@ impl BackwardOp for ReluBackward with fn backward(self, grad, out_shape, inputs)
   for i in 0..<g.length() {
     g[i] = if self.input_data[i] > 0.0 { grad[i] } else { 0.0 }
   }
-  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape) }]
+  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape), }]
 }
 
 ///|
@@ -101,5 +101,5 @@ impl BackwardOp for GeluBackward with fn backward(self, grad, out_shape, inputs)
     let derivative = normal_cdf(x) + x * normal_pdf(x)
     g[i] = grad[i] * derivative
   }
-  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape) }]
+  [{ slot: 0, data: reduce_to_shape(g, out_shape, inputs[0].shape), }]
 }

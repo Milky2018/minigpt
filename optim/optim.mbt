@@ -87,7 +87,7 @@ pub fn AdamWConfig::AdamWConfig(
   if weight_decay < 0.0 {
     abort("AdamW weight decay must not be negative")
   }
-  { lr, beta1, beta2, eps, weight_decay }
+  { lr, beta1, beta2, eps, weight_decay, }
 }
 
 ///|

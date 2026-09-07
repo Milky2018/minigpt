@@ -96,7 +96,7 @@ pub fn ArchitectureConfig::ArchitectureConfig(
   n_layer? : Int = N_LAYER,
 ) -> ArchitectureConfig {
   validate_architecture_options(n_embd, n_head, n_layer)
-  { n_embd, n_head, n_layer }
+  { n_embd, n_head, n_layer, }
 }
 
 ///|
@@ -123,7 +123,7 @@ pub fn ModelConfig::ModelConfig(
   block_size? : Int = BLOCK_SIZE,
 ) -> ModelConfig {
   validate_transformer_options(vocab_size, n_embd, n_head, n_layer, block_size)
-  { vocab_size, n_embd, n_head, n_layer, block_size }
+  { vocab_size, n_embd, n_head, n_layer, block_size, }
 }
 
 ///|

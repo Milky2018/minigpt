@@ -296,7 +296,7 @@ fn run_train(matches : @argparse.Matches) -> Unit {
   println("n_embd: \{model.n_embd()}")
   println("n_head: \{model.n_head()}")
   println("n_layer: \{model.n_layer()}")
-  let saved_checkpoints : Ref[Int] = { val: 0 }
+  let saved_checkpoints : Ref[Int] = { val: 0, }
   let stats = @minigpt.train_token_ids_with_callbacks(
     model,
     train_ids,

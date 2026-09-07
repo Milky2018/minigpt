@@ -60,7 +60,7 @@ fn sample_from_logits(
   config : SamplingConfig,
 ) -> Int {
   let data = logits.data()
-  let order = Array::new(capacity=data.length())
+  let order = Array(capacity=data.length())
   match config.allowed_ids {
     Some(ids) =>
       for id in ids {

@@ -111,7 +111,7 @@ pub fn TokenIds::TokenIds(data : Array[Int], shape : Array[Int]) -> TokenIds {
   if data.length() != shape_size(shape) {
     abort("token id data length does not match shape")
   }
-  { data: data.copy(), shape: copy_ints(shape) }
+  { data: data.copy(), shape: copy_ints(shape), }
 }
 
 ///|
